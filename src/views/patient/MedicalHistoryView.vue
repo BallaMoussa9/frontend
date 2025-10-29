@@ -169,7 +169,7 @@ import { useLabStore } from '@/stores/labStore';
 import { usePatientStore } from '@/stores/patientStore';
 import { useMedicalRecordStore } from '@/stores/medicalrecordStore';
 import { useConsultationStore } from '@/stores/consultationStore';
-import { useMedicalReportStore } from '@/stores/medicalReportStore';
+import { useMedicalReportStore } from '@/stores/medicalreportStore';
 
 // --------------------------------------------------------
 // 1. Déclaration et Initialisation des Stores et Route
