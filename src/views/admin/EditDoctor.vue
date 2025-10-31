@@ -7,9 +7,9 @@
       <div v-if="doctorStore.error" class="error-message">{{ doctorStore.error }}</div>
       <div v-if="doctorStore.success" class="success-message">{{ doctorStore.success }}</div>
 
-      <form 
-        @submit.prevent="submitForm" 
-        class="medecin-form" 
+      <form
+        @submit.prevent="submitForm"
+        class="medecin-form"
         v-if="!doctorStore.loading && doctorStore.currentDoctor"
       >
         <fieldset>
@@ -18,7 +18,7 @@
             <input v-model="form.first_name" type="text" placeholder="Prénom" required />
             <input v-model="form.last_name" type="text" placeholder="Nom" required />
           </div>
-          <div class="form-row"> 
+          <div class="form-row">
             <input v-model="form.birth_date" type="date" placeholder="Date de naissance" />
             <input v-model="form.phone" type="text" placeholder="Téléphone" />
           </div>
@@ -34,22 +34,22 @@
             <input v-model="form.address" type="text" placeholder="Adresse" />
             <select v-model="form.department_id">
               <option disabled value="">-- Département --</option>
-              <option 
-                v-for="dept in departmentStore.departments" 
-                :key="dept.id" 
+              <option
+                v-for="dept in departmentStore.departments"
+                :key="dept.id"
                 :value="dept.id"
-              > 
+              >
                 {{ dept.name }}
               </option>
             </select>
           </div>
           <div class="form-row">
             <label for="profile_photo">Photo de profil actuelle:</label>
-            <img 
-              v-if="form.profile_photo_url" 
-              :src="form.profile_photo_url" 
-              alt="Photo de profil actuelle" 
-              style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-right: 15px;" 
+            <img
+              v-if="form.profile_photo_url"
+              :src="form.profile_photo_url"
+              alt="Photo de profil actuelle"
+              style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-right: 15px;"
             />
             <input type="file" id="profile_photo" @change="handleFileUpload" />
           </div>
@@ -88,12 +88,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDoctorStore } from '@/stores/doctorStore'
 import { useDepartmentStore } from '@/stores/departmentStore'
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 const route = useRoute()
 const router = useRouter()
 const doctorStore = useDoctorStore()
 const departmentStore = useDepartmentStore()
 
-// ✅ ici on récupère bien l’ID du DOCTOR (pas l'user)
 const doctorId = route.params.id
 
 const form = reactive({
@@ -114,7 +115,8 @@ const form = reactive({
   numero_ordre: '',
   biography: '',
   experience: '',
-  numero_professionel: ''
+  numero_professionel: '',
+  doctor_id: null,
 })
 
 const handleFileUpload = (e) => {
@@ -127,35 +129,42 @@ const handleFileUpload = (e) => {
   }
 }
 
+// 🔑 CORRECTION CRITIQUE : Utilise doctorData.user, garanti par le store
 const fillFormWithDoctorData = (doctorData) => {
-  if (doctorData) {
-    // Champs USER
-    form.first_name = doctorData.user?.first_name || ''
-    form.last_name = doctorData.user?.last_name || ''
-    form.birth_date = doctorData.user?.birth_date || ''
-    form.phone = doctorData.user?.phone || ''
-    form.country = doctorData.user?.country || ''
-    form.city = doctorData.user?.city || ''
-    form.address = doctorData.user?.address || ''
-    form.email = doctorData.user?.email || ''
-    form.profile_photo_url = doctorData.user?.profile_photo 
-      ? `/storage/${doctorData.user.profile_photo}` 
-      : null
+  if (!doctorData || !doctorData.user) return; // ⚡ On s'assure que doctorData.user existe
 
-    // Champs DOCTOR
-    form.department_id = doctorData.department_id || ''
-    form.speciality = doctorData.speciality || ''
-    form.numero_ordre = doctorData.numero_ordre || ''
-    form.biography = doctorData.biography || ''
-    form.experience = doctorData.experience || ''
-    form.numero_professionel = doctorData.numero_professionel || ''
-    form.status = doctorData.status || 'active'
+  // 🎯 SOURCE : On utilise uniquement l'objet 'user' garanti par le store Pinia.
+  const sourceData = doctorData.user;
 
-    // ⚡ très important → garde l’ID réel du docteur
-    form.doctor_id = doctorData.id  
+  // Remplissage des champs USER (via sourceData.user)
+  form.first_name = sourceData.first_name || ''
+  form.last_name = sourceData.last_name || ''
+  form.birth_date = sourceData.birth_date || ''
+  form.phone = sourceData.phone || ''
+  form.country = sourceData.country || ''
+  form.city = sourceData.city || ''
+  form.address = sourceData.address || ''
+  form.email = sourceData.email || ''
 
-    form.password = '' // jamais pré-rempli
-  }
+  // Pour la photo
+  const photoPath = sourceData.profile_photo;
+
+  form.profile_photo_url = photoPath
+    ? `${BASE_URL}/storage/${photoPath}`
+    : null
+
+  // Remplissage des champs DOCTOR (directement sur doctorData)
+  form.department_id = doctorData.department_id || ''
+  form.speciality = doctorData.speciality || ''
+  form.numero_ordre = doctorData.numero_ordre || ''
+  form.biography = doctorData.biography || ''
+  form.experience = doctorData.experience || ''
+  form.numero_professionel = doctorData.numero_professionel || ''
+  form.status = doctorData.status || 'active'
+
+  form.doctor_id = doctorData.id
+
+  form.password = ''
 }
 
 
@@ -165,8 +174,21 @@ const submitForm = async () => {
   for (const key in form) {
     const value = form[key];
     if (key === 'profile_photo_url' || key === 'password_confirmation') continue;
-    if (key === 'password' && !value) continue;
-    if (key === 'profile_photo' && !(value instanceof File)) continue;
+
+    if (key === 'password') {
+      if (value) {
+        formData.append(key, value);
+      }
+      continue;
+    }
+
+    if (key === 'profile_photo') {
+        if (value instanceof File) {
+             formData.append(key, value);
+        }
+        continue;
+    }
+
     if (value !== null && value !== '') {
       formData.append(key, value);
     }
@@ -174,13 +196,13 @@ const submitForm = async () => {
 
   formData.append('_method', 'PUT');
 
-  for (let pair of formData.entries()) {
-    console.log(pair[0]+ ': ' + pair[1]); 
+  if (!form.doctor_id) {
+    console.error("Erreur: ID du docteur manquant pour la mise à jour.");
+    doctorStore.error = "Erreur interne: ID du docteur non défini pour la mise à jour.";
+    return;
   }
-console.log("➡️ ID du docteur envoyé :", form.doctor_id)
 
-  // ✅ Ici on envoie bien doctorId (ex: 26)
-const success = await doctorStore.updateDoctor(form.doctor_id, formData);
+  const success = await doctorStore.updateDoctor(form.doctor_id, formData);
 
   if (success) {
     setTimeout(() => {
@@ -189,20 +211,30 @@ const success = await doctorStore.updateDoctor(form.doctor_id, formData);
   }
 };
 
-watch(() => doctorStore.currentDoctor, (newDoctor) => {
-  fillFormWithDoctorData(newDoctor)
-}, { immediate: true })
+// =================================================================================
+// GARANTIE DE CHARGEMENT : Appel direct + Watch Forcé (inchangé)
+// =================================================================================
 
 onMounted(async () => {
   await doctorStore.fetchOneDoctor(doctorId)
+
+  if (doctorStore.currentDoctor) {
+      fillFormWithDoctorData(doctorStore.currentDoctor);
+  }
+
   await departmentStore.fetchDepartments()
 })
+
+// Surveillance Forcée : Regarde l'objet complet en profondeur.
+watch(() => doctorStore.currentDoctor, (newDoctor) => {
+    if (newDoctor) {
+        fillFormWithDoctorData(newDoctor)
+    }
+}, { immediate: true, deep: true })
 </script>
 
 
-
 <style scoped>
-/* styles intacts */
 .ajouter-medecin-container {
   max-width: 900px;
   margin: auto;

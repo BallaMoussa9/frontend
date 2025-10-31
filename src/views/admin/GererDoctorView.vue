@@ -13,7 +13,7 @@
         {{ doctorStore.error }}
       </div>
 
-      <div class="table-container" v-if="doctorStore.doctors?.data?.length">
+      <div class="table-container" v-if="doctorsList.length">
         <table class="doctor-table">
           <thead>
             <tr>
@@ -27,7 +27,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(doctor, index) in doctorStore.doctors.data" :key="doctor.id">
+            <tr v-for="(doctor, index) in doctorsList" :key="doctor.id">
               <td>{{ index + 1 }}</td>
               <td>{{ doctor.user?.first_name }} {{ doctor.user?.last_name }}</td>
               <td>{{ doctor.speciality }}</td>
@@ -48,10 +48,9 @@
           </tbody>
         </table>
 
-        <!-- Pagination -->
-        <div class="pagination">
-          Page {{ doctorStore.doctors.current_page }} / {{ doctorStore.doctors.last_page }}
-          ({{ doctorStore.doctors.total }} médecins)
+        <div class="pagination" v-if="paginationMeta.total > 0">
+          Page {{ paginationMeta.current_page }} / {{ paginationMeta.last_page }}
+          ({{ paginationMeta.total }} médecins)
         </div>
       </div>
     </div>
@@ -59,13 +58,43 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue'; // 💡 Ajouter 'computed'
 import { useRouter, RouterLink } from 'vue-router'
 import { useDoctorStore } from '@/stores/doctorStore'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const doctorStore = useDoctorStore();
 const router = useRouter()
+
+// =========================================================================
+// 💡 NOUVELLE LOGIQUE POUR L'ADAPTATION DE LA VUE
+// =========================================================================
+
+// Crée une liste sécurisée pour itérer (les données des docteurs)
+const doctorsList = computed(() => {
+    // Si doctorStore.doctors est le tableau [] (état initial), ou si c'est l'objet de pagination,
+    // on vérifie si la propriété 'data' existe et est un tableau.
+    // Si doctorStore.doctors est l'objet de pagination, il renverra le tableau de docteurs.
+    // Sinon, il renverra un tableau vide [] (l'état initial).
+    if (doctorStore.doctors && Array.isArray(doctorStore.doctors.data)) {
+        return doctorStore.doctors.data
+    }
+    return Array.isArray(doctorStore.doctors) ? doctorStore.doctors : []
+})
+
+// Crée un objet sécurisé pour la méta-information de pagination
+const paginationMeta = computed(() => {
+    // Fournit les valeurs de pagination ou des valeurs par défaut sécurisées
+    return {
+        current_page: doctorStore.doctors.current_page || 0,
+        last_page: doctorStore.doctors.last_page || 0,
+        total: doctorStore.doctors.total || 0,
+    }
+})
+
+// =========================================================================
+// ⬆️ FIN DE LA LOGIQUE D'ADAPTATION
+// =========================================================================
 
 const openAddForm = () => {
   router.push({ name: 'AddUserDoctor' })
@@ -86,6 +115,8 @@ onMounted(() => {
   doctorStore.fetchAllDoctors();
 })
 </script>
+
+
 
 <style scoped>
 .doctor-management {
