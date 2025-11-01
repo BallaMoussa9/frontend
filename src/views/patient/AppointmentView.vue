@@ -115,11 +115,11 @@
       <div v-else-if="!patientIdComputed">
         <p class="info-message">Impossible de trouver votre ID patient. Vérifiez votre connexion.</p>
       </div>
-      <div v-else-if="patientAppointments.length === 0">
-        <p class="info-message">Vous n'avez aucun rendez-vous planifié. Prenez-en un ci-dessus !</p>
+      <div v-else-if="futureAppointments.length === 0">
+        <p class="info-message">Vous n'avez aucun rendez-vous à venir. Prenez-en un ci-dessus !</p>
       </div>
       <div v-else class="appointments-list">
-        <div v-for="appointment in patientAppointments" :key="appointment.id" class="appointment-card appointment-item">
+        <div v-for="appointment in futureAppointments" :key="appointment.id" class="appointment-card appointment-item">
           <p>
             <strong>Médecin:</strong>
             {{ appointment.doctor?.user?.first_name }}
@@ -211,8 +211,29 @@ const getSubmitButtonText = computed(() => {
 
 const patientAppointments = computed(() => Array.isArray(appointmentStore.appointments) ? appointmentStore.appointments : []);
 
+// 🔥 CORRECTION : Filtre robuste pour les rendez-vous futurs
+const futureAppointments = computed(() => {
+  const now = new Date();
+  const currentDateString = now.toISOString().split('T')[0]; // "2024-10-31"
+  const currentTimeString = now.toTimeString().split(' ')[0]; // "22:45:00"
+
+  return patientAppointments.value.filter(appointment => {
+    const appointmentDate = appointment.appointment_date;
+    const appointmentTime = appointment.appointment_time;
+
+    // Comparaison directe des strings (plus fiable)
+    if (appointmentDate > currentDateString) {
+      return true; // Date future
+    } else if (appointmentDate === currentDateString) {
+      return appointmentTime >= currentTimeString; // Même date, heure future ou présente
+    }
+
+    return false; // Date passée
+  });
+});
+
 const activeAppointments = computed(() => {
-    return patientAppointments.value.filter(appointment =>
+    return futureAppointments.value.filter(appointment =>
         ['pending', 'confirmed', 'rescheduled', 'scheduled'].includes(appointment.status)
     );
 });
@@ -414,7 +435,9 @@ const testAppointmentAPI = async () => {
         status: 'success',
         patientId: patientId,
         appointmentsCount: appointmentStore.appointments.length,
+        futureAppointmentsCount: futureAppointments.value.length,
         appointments: appointmentStore.appointments,
+        futureAppointments: futureAppointments.value,
         authState: {
           isInitialized: isAuthInitialized.value,
           isLoggedIn: isLoggedIn.value,
