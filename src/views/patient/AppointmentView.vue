@@ -74,19 +74,35 @@
 
             <div class="form-group">
               <label for="appointment_date">Date du Rendez-vous *</label>
-              <input id="appointment_date" v-model="form.appointment_date" type="date" :min="minDate" required />
+              <input id="appointment_date" v-model="form.appointment_date" type="date" :min="minDate" required @change="updateMinTime" />
+              <small v-if="form.appointment_date === minDate" class="date-hint">Aujourd'hui</small>
             </div>
 
             <div class="form-group">
               <label for="appointment_time">Heure du Rendez-vous *</label>
-              <input id="appointment_time" v-model="form.appointment_time" type="time" required />
+              <input id="appointment_time" v-model="form.appointment_time" type="time" :min="minTime" required />
+              <small v-if="minTime" class="time-hint">Heure minimum: {{ minTime }}</small>
             </div>
           </div>
 
-          <button type="submit" :disabled="appointmentStore.loading || doctorStore.loading || !patientIdComputed">
-            {{ (appointmentStore.loading || doctorStore.loading) ? 'Envoi...' : 'Confirmer le rendez-vous' }}
+          <button type="submit" :disabled="appointmentStore.loading || doctorStore.loading || !patientIdComputed || isPastDateTime">
+            {{ getSubmitButtonText }}
           </button>
+
+          <p v-if="isPastDateTime" class="error-message small">
+            ⚠️ Impossible de prendre un rendez-vous à une date/heure passée
+          </p>
         </form>
+      </div>
+
+      <!-- Bouton de test debug -->
+      <div style="margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+        <button @click="testAppointmentAPI" style="padding: 10px; background: #666; color: white; border: none; border-radius: 4px;">
+          🔧 Tester l'API Rendez-vous
+        </button>
+        <div v-if="debugResult" style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
+          <pre>{{ debugResult }}</pre>
+        </div>
       </div>
 
       <h2 class="mt-8 mb-4">Mes Rendez-vous</h2>
@@ -147,19 +163,20 @@ const userStore = useUserStore();
 
 // --- PROPRIÉTÉS CALCULÉES BASÉES SUR L'AUTHSTORE ---
 const currentAuthUserId = computed(() => authStore.userId);
-const patientIdComputed = computed(() => authStore.profileId); // 🔑 L'ID du patient est le profileId du store Auth
+const patientIdComputed = computed(() => authStore.profileId);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const isAuthInitialized = computed(() => authStore.initialized);
 const authLoading = computed(() => authStore.loading);
-// 🔑 Vérification du rôle, insensible à la casse
 const isPatientRole = computed(() =>
     authStore.role_name && authStore.role_name.toLowerCase() === 'patient'
 );
 
-
 // --- ÉTATS LOCAUX ---
 const formLoading = ref(true);
+const debugResult = ref(null);
+const minTime = ref('');
 const doctorsAvailable = computed(() => doctorStore.doctors);
+
 const form = reactive({
   doctor_id: '',
   appointment_date: '',
@@ -168,12 +185,28 @@ const form = reactive({
   motif: '',
 });
 
+// --- NOUVELLES PROPRIÉTÉS POUR LA VALIDATION TEMPORELLE ---
 const minDate = computed(() => {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+});
+
+const isPastDateTime = computed(() => {
+  if (!form.appointment_date || !form.appointment_time) return false;
+
+  const selectedDateTime = new Date(`${form.appointment_date}T${form.appointment_time}`);
+  const now = new Date();
+
+  return selectedDateTime < now;
+});
+
+const getSubmitButtonText = computed(() => {
+  if (appointmentStore.loading || doctorStore.loading) return 'Envoi...';
+  if (isPastDateTime.value) return 'Date/heure invalide';
+  return 'Confirmer le rendez-vous';
 });
 
 const patientAppointments = computed(() => Array.isArray(appointmentStore.appointments) ? appointmentStore.appointments : []);
@@ -187,22 +220,42 @@ const activeAppointments = computed(() => {
 const hasActiveAppointment = computed(() => activeAppointments.value.length > 0);
 const activeAppointmentsCount = computed(() => activeAppointments.value.length);
 
+// --- MÉTHODES POUR LA GESTION DU TEMPS ---
+function updateMinTime() {
+  const today = new Date().toISOString().split('T')[0];
+
+  if (form.appointment_date === today) {
+    // Si la date sélectionnée est aujourd'hui, on définit l'heure minimum sur l'heure actuelle + 1 heure
+    const now = new Date();
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const currentMinute = now.getMinutes().toString().padStart(2, '0');
+
+    // On ajoute 1 heure pour éviter les rendez-vous trop proches
+    const nextHour = (now.getHours() + 1) % 24;
+    const nextHourString = nextHour.toString().padStart(2, '0');
+
+    minTime.value = `${nextHourString}:${currentMinute}`;
+
+    // Si l'heure actuelle est trop proche de minuit, on ajuste
+    if (form.appointment_time && form.appointment_time < minTime.value) {
+      form.appointment_time = minTime.value;
+    }
+  } else {
+    // Pour les dates futures, on permet toutes les heures
+    minTime.value = '00:00';
+  }
+}
 
 // --- ACTIONS ASYNCHRONES ET LOGIQUE DE CHARGEMENT ---
-
-// 🔑 Simplifié : Cette fonction n'est plus critique pour l'affichage, elle sert juste à s'assurer que le userStore a le patientID.
 async function loadPatientProfile() {
   appointmentStore.clearMessages();
 
   if (isLoggedIn.value && isPatientRole.value && currentAuthUserId.value) {
     try {
-      // ⚠️ Important : On ne réassigne PLUS patientIdForAppointments. On utilise patientIdComputed.
-      // Cet appel API est maintenant juste une vérification pour s'assurer que l'enregistrement existe.
       await userStore.fetchPatientByUserId(currentAuthUserId.value);
       console.log('Appointment: Profil patient vérifié par userStore.');
     } catch (err) {
       console.error('Appointment: Erreur lors de la vérification de l\'ID patient:', err);
-      // Ceci va maintenant déclencher le message d'erreur du userStore sur le template
     }
   } else {
     console.log('Appointment: Pas de profil patient à charger (non connecté ou pas patient).');
@@ -225,22 +278,17 @@ async function loadPatientAppointments(patientId) {
 }
 
 // --- CYCLE DE VIE ET WATCHERS ---
-
 onMounted(async () => {
-  // L'initialisation est gérée dans main.js, on lance juste le chargement des médecins
   await loadDoctors();
 });
 
-// 🔑 Watcher Unique sur l'état d'authentification final
-// Se déclenche UNIQUEMENT quand l'état est stable (initialized)
 watch(isAuthInitialized, async (initialized) => {
   if (initialized) {
     console.log("Appointment.vue: AuthStore initialisé. Vérification du profil et chargement des RVs.");
-    await loadPatientProfile(); // Vérifie que le profil est bien là
+    await loadPatientProfile();
   }
 }, { immediate: true });
 
-// 🔑 Watcher pour charger les RVs dès que l'ID du patient est connu et valide
 watch(patientIdComputed, async (newPatientId) => {
     if (newPatientId && isPatientRole.value) {
         console.log(`Appointment.vue: ID patient valide (${newPatientId}). Chargement des rendez-vous.`);
@@ -248,9 +296,7 @@ watch(patientIdComputed, async (newPatientId) => {
     }
 }, { immediate: true });
 
-
 // --- MÉTHODES DE GESTION DES RENDEZ-VOUS ---
-
 function formatStatus(status) {
     const statuses = {
         'pending': 'En attente',
@@ -263,10 +309,14 @@ function formatStatus(status) {
     return statuses[status] || status;
 }
 
-
 async function submitAppointment() {
   if (!patientIdComputed.value) {
     appointmentStore.setError("Impossible de soumettre le rendez-vous: ID patient manquant.");
+    return;
+  }
+
+  if (isPastDateTime.value) {
+    appointmentStore.setError("Impossible de prendre un rendez-vous à une date/heure passée.");
     return;
   }
 
@@ -279,13 +329,12 @@ async function submitAppointment() {
   });
 
   if (success) {
-    // Réinitialisation du formulaire
     form.doctor_id = '';
     form.appointment_date = '';
     form.appointment_time = '';
     form.type = '';
     form.motif = '';
-    // Recharger la liste pour afficher le nouveau RV
+    minTime.value = '';
     await loadPatientAppointments(patientIdComputed.value);
   }
 }
@@ -318,6 +367,14 @@ async function rescheduleAppointment(appointment) {
         alert('La date et l\'heure sont requises pour reporter un rendez-vous.');
         return;
     }
+
+    // Validation de la nouvelle date/heure
+    const newDateTime = new Date(`${newDate}T${newTime}`);
+    if (newDateTime < new Date()) {
+        alert('Impossible de programmer un rendez-vous à une date/heure passée.');
+        return;
+    }
+
     const success = await appointmentStore.updateAppointment(patientIdComputed.value, appointment.id, {
         status: 'rescheduled',
         appointment_date: newDate,
@@ -344,6 +401,49 @@ async function confirmRescheduled(appointmentIdToConfirm) {
         await loadPatientAppointments(patientIdComputed.value);
     }
 }
+
+// --- MÉTHODE DE TEST DEBUG ---
+const testAppointmentAPI = async () => {
+  try {
+    debugResult.value = '🔄 Test en cours...';
+
+    const patientId = authStore.profileId;
+    if (patientId) {
+      await appointmentStore.fetchPatientAppointments(patientId);
+      debugResult.value = {
+        status: 'success',
+        patientId: patientId,
+        appointmentsCount: appointmentStore.appointments.length,
+        appointments: appointmentStore.appointments,
+        authState: {
+          isInitialized: isAuthInitialized.value,
+          isLoggedIn: isLoggedIn.value,
+          isPatient: isPatientRole.value,
+          patientId: patientIdComputed.value,
+          userId: currentAuthUserId.value
+        }
+      };
+    } else {
+      debugResult.value = {
+        status: 'error',
+        message: 'Patient ID non disponible',
+        authState: {
+          isInitialized: isAuthInitialized.value,
+          isLoggedIn: isLoggedIn.value,
+          isPatient: isPatientRole.value,
+          patientId: patientIdComputed.value,
+          userId: currentAuthUserId.value
+        }
+      };
+    }
+  } catch (error) {
+    debugResult.value = {
+      status: 'error',
+      error: error.message,
+      response: error.response?.data
+    };
+  }
+};
 </script>
 
 <style scoped>
@@ -445,24 +545,33 @@ button[type="submit"]:hover:not(:disabled) {
   background-color: #001a60;
 }
 
-button:disabled {
+button[type="submit"]:disabled {
   background-color: #a0a0a0;
   cursor: not-allowed;
 }
 
-/* Messages */
+/* Messages et indications */
 .error-message {
   color: #d32f2f; background-color: #ffebee; border: 1px solid #ef9a9a;
   padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;
 }
+
+.error-message.small {
+  font-size: 0.9em;
+  padding: 8px;
+  margin-top: 10px;
+}
+
 .success-message {
   color: #388e3c; background-color: #e8f5e9; border: 1px solid #a5d6a7;
   padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;
 }
+
 .info-message {
     color: #2196f3; background-color: #e3f2fd; border: 1px solid #90caf9;
     padding: 10px; border-radius: 5px; text-align: center; margin-top: 15px;
 }
+
 .warning-message {
     color: #ff9800;
     background-color: #fff3e0;
@@ -474,6 +583,12 @@ button:disabled {
     font-weight: 500;
 }
 
+.date-hint, .time-hint {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+}
 
 /* Liste des RDV */
 .appointments-list {
@@ -518,6 +633,7 @@ button:disabled {
     gap: 10px;
     flex-wrap: wrap;
 }
+
 .action-buttons button {
     padding: 8px 15px;
     border-radius: 5px;
@@ -529,6 +645,7 @@ button:disabled {
     border: none;
     color: white;
 }
+
 .cancel-button { background-color: #f44336; }
 .cancel-button:hover { background-color: #d32f2f; }
 .reschedule-button { background-color: #2196f3; }
@@ -540,4 +657,14 @@ button:disabled {
   opacity: 0.6;
   pointer-events: none;
 }
+
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.mt-8 { margin-top: 2rem; }
+.mb-4 { margin-bottom: 1rem; }
 </style>
