@@ -1,66 +1,82 @@
 <template>
   <AppLayout>
-    <div class="login-container">
-      <div class="login-card">
-        <div class="header">
-          <h2 class="title">Connexion à SanKo</h2>
-          <p class="subtitle">Sélectionnez votre rôle pour accéder à votre espace.</p>
-        </div>
-
-        <form @submit.prevent="seConnecter" class="login-form">
-          <div class="input-group">
-            <label for="email">Adresse E-mail</label>
-            <input id="email" v-model="email" type="email" placeholder="votre.nom@sanko.com" required />
-          </div>
-
-          <div class="input-group">
-            <label for="password">Mot de passe</label>
-            <input id="password" v-model="password" type="password" placeholder="********" required />
-          </div>
-
-          <div class="roles-selection">
-            <label class="roles-label">Je me connecte en tant que :</label>
-            <div class="roles-grid">
-              <label class="role-option">
-                <input type="radio" v-model="role" value="patient" required />
-                <span class="role-icon">👤</span> Patient
-              </label>
-              <label class="role-option">
-                <input type="radio" v-model="role" value="doctor" required />
-                <span class="role-icon">🩺</span> Médecin
-              </label>
-              <label class="role-option">
-                <input type="radio" v-model="role" value="nurse" required />
-                <span class="role-icon">💉</span> Infirmier
-              </label>
-              <label class="role-option">
-                <input type="radio" v-model="role" value="lab_technician" required />
-                <span class="role-icon">🧪</span> Laboratoire
-              </label>
-              <label class="role-option">
-                <input type="radio" v-model="role" value="accountant" required />
-                <span class="role-icon">💰</span> Comptable
-              </label>
-              <label class="role-option">
-                <input type="radio" v-model="role" value="admin" required />
-                <span class="role-icon">⚙️</span> Admin
-              </label>
-            </div>
-          </div>
-
-          <button type="submit" :disabled="authStore.loading || isFetchingProfileId" class="btn-primary">
-             {{ authStore.loading ? 'Authentification...' : isFetchingProfileId ? 'Chargement profil...' : 'Se connecter' }}
-          </button>
-        </form>
-
-         <p v-if="authStore.authError" class="error-message">
-          {{ authStore.authError }}
+    <div class="login-page-wrapper"> <div class="illustration-section">
+        <img src="/santeko.png" alt="Illustration Santeko" class="login-illustration" />
+        <p class="illustration-text">
+          Votre santé, notre priorité. <br/>
+          SanTeKo, le futur de la santé connectée.
         </p>
+      </div>
 
-        <div class="options-footer">
-          <a href="#" class="link-secondary">Mot de passe oublié ?</a>
-          <span class="separator">|</span>
-          <a href="#" class="link-secondary">Connexion OTP</a>
+      <div class="login-container">
+        <div class="login-card">
+          <div class="header">
+            <h2 class="title">Connexion à SanTeKo</h2>
+            <p class="subtitle">Sélectionnez votre rôle pour accéder à votre espace.</p>
+          </div>
+
+          <form @submit.prevent="seConnecter" class="login-form">
+            <div class="input-group">
+              <label for="email">Adresse E-mail</label>
+              <input id="email" v-model="email" type="email" placeholder="votre.nom@santeko.com" required />
+            </div>
+
+            <div class="input-group">
+              <label for="password">Mot de passe</label>
+              <input id="password" v-model="password" type="password" placeholder="********" required />
+            </div>
+
+            <div class="roles-selection">
+              <label class="roles-label">Je me connecte en tant que :</label>
+              <div class="roles-grid">
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="patient" required />
+                  <span class="role-icon">👤</span> Patient
+                </label>
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="doctor" required />
+                  <span class="role-icon">🩺</span> Médecin
+                </label>
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="nurse" required />
+                  <span class="role-icon">💉</span> Infirmier
+                </label>
+
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="urgentist" required />
+                  <span class="role-icon">🚑</span> Urgentiste
+                </label>
+
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="lab_technician" required />
+                  <span class="role-icon">🧪</span> Laboratoire
+                </label>
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="accountant" required />
+                  <span class="role-icon">💰</span> Comptable
+                </label>
+                <label class="role-option">
+                  <input type="radio" v-model="role" value="admin" required />
+                  <span class="role-icon">⚙️</span> Admin
+                </label>
+
+              </div>
+            </div>
+
+            <button type="submit" :disabled="authStore.loading || isFetchingProfileId" class="btn-primary">
+              {{ authStore.loading ? 'Authentification...' : isFetchingProfileId ? 'Chargement profil...' : 'Se connecter' }}
+            </button>
+          </form>
+
+          <p v-if="authStore.authError" class="error-message">
+            {{ authStore.authError }}
+          </p>
+
+          <div class="options-footer">
+            <a href="#" class="link-secondary">Mot de passe oublié ?</a>
+            <span class="separator">|</span>
+            <a href="#" class="link-secondary">Connexion OTP</a>
+          </div>
         </div>
       </div>
     </div>
@@ -89,7 +105,6 @@ async function seConnecter() {
   console.log("--- Début de la connexion ---");
 
   try {
-    // 1. Étape d'authentification standard
     const response = await authStore.login({
       email: email.value,
       password: password.value,
@@ -101,44 +116,50 @@ async function seConnecter() {
     const roleId = response.role_id;
     console.log(`Authentification réussie. Utilisateur ID: ${userId}, Rôle: ${roleName}`);
 
-    // Initialisation/Fallback
     let finalProfileId = userId;
 
-    // 2. LOGIQUE CRITIQUE : RÉCUPÉRATION DE L'ID DE PROFIL SPÉCIFIQUE
     isFetchingProfileId.value = true;
 
     try {
         let profileIdFound = null;
 
-        // Récupération de l'ID spécifique (PatientId, DoctorId, NurseId)
         if (roleName === 'patient') {
             profileIdFound = await userStore.fetchPatientByUserId(userId);
         } else if (roleName === 'doctor') {
             profileIdFound = await userStore.fetchDoctorByUserId(userId);
         } else if (roleName === 'nurse') {
             profileIdFound = await userStore.fetchNurseByUserId(userId);
+        } else if (roleName === 'urgentist') {
+            profileIdFound = await userStore.fetchUrgentistByUserId(userId);
+        } else if (roleName === 'lab_technician') {
+            // TODO: Assurez-vous d'avoir cette méthode dans userStore
+            profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
+        } else if (roleName === 'accountant') {
+            // TODO: Assurez-vous d'avoir cette méthode dans userStore
+            profileIdFound = await userStore.fetchAccountantByUserId(userId);
         }
+        // Pour Admin, l'ID utilisateur est souvent suffisant ou géré différemment.
+        // Si vous avez un AdminId spécifique, ajoutez la logique ici :
+        // else if (roleName === 'admin') {
+        //     profileIdFound = await userStore.fetchAdminByUserId(userId);
+        // }
 
-        // Si un ID de profil spécifique a été trouvé, on l'utilise
+
         if (profileIdFound) {
             finalProfileId = profileIdFound;
         }
 
     } catch (fetchError) {
-        console.error("❌ Échec de la récupération du profil spécifique. Utilisation de l'ID Utilisateur comme fallback.", fetchError);
+        console.error(`❌ Échec de la récupération du profil spécifique (${roleName}). Utilisation de l'ID Utilisateur comme fallback.`, fetchError);
     } finally {
         isFetchingProfileId.value = false;
     }
 
-    // 3. LOGIQUE DE CORRECTION : Stockage de l'ID de profil de manière sécurisée
-    // 🔑 Utilisation de l'action setProfileId pour éviter le "TypeError: 'set' on proxy"
     if (finalProfileId) {
         authStore.setProfileId(finalProfileId);
         console.log(`✅ ID de profil (${roleName}) stocké: ${finalProfileId}`);
     }
 
-    // Le store gère maintenant la redirection via son action 'login'
-    // La redirection est gérée dans authStore.login -> authStore.redirectAfterLogin()
 
   } catch (error) {
     console.error('❌ Erreur de connexion (front-end) :', error.message);
@@ -152,30 +173,65 @@ async function seConnecter() {
 
 <style scoped>
 /* ---------------------------------
-   BASE & LAYOUT
+   GLOBAL LAYOUT (NOUVEAU)
 --------------------------------- */
+.login-page-wrapper {
+  display: flex; /* Utilisation de flexbox pour aligner côte à côte */
+  justify-content: center;
+  align-items: stretch; /* Les éléments s'étirent sur la hauteur */
+  min-height: 100vh;
+  background-color: #f0f4f8;
+  padding: 50px 20px; /* Ajout de padding global */
+  gap: 40px; /* Espace entre l'image et le formulaire */
+}
+
+/* Section illustration */
+.illustration-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    max-width: 500px; /* Taille max pour l'illustration */
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #e6f7ff, #cceeff); /* Fond dégradé doux */
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.login-illustration {
+    max-width: 80%; /* Ajuste la taille de l'image dans sa section */
+    height: auto;
+    margin-bottom: 30px;
+}
+
+.illustration-text {
+    font-size: 1.2rem;
+    color: #003366;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+/* Conteneur du formulaire (Styles existants, mais dans le nouveau flux) */
 .login-container {
-  display: flex;
+  display: flex; /* Maintient le centrage du formulaire dans sa colonne */
   justify-content: center;
   align-items: center;
-  /* Assurez-vous que le conteneur prend toute la hauteur visible */
-  min-height: 100vh;
-  padding: 50px 20px;
-  background-color: #f0f4f8; /* Fond légèrement bleuté */
+  flex-grow: 1; /* Permet au conteneur du formulaire de prendre l'espace restant */
 }
 
 .login-card {
   background: white;
   padding: 40px;
-  border-radius: 16px; /* Bords plus arrondis */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Ombre plus douce et profonde */
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 420px;
+  max-width: 420px; /* Garde la largeur du formulaire */
   transition: transform 0.3s ease;
 }
 
 /* ---------------------------------
-   TYPOGRAPHIE & HEADER
+   TYPOGRAPHIE & HEADER (FORMULAIRE)
 --------------------------------- */
 .header {
   text-align: center;
@@ -186,7 +242,7 @@ async function seConnecter() {
   font-size: 1.8rem;
   font-weight: 800;
   margin-bottom: 5px;
-  color: #003366; /* Bleu institutionnel foncé */
+  color: #003366;
 }
 
 .subtitle {
@@ -194,8 +250,14 @@ async function seConnecter() {
   color: #6c757d;
 }
 
+/* Le .santeko-logo n'est plus dans le .header du formulaire */
+/* Supprimer les styles .santeko-logo si vous ne l'utilisez plus */
+.santeko-logo {
+    display: none; /* Cache l'ancien logo si besoin */
+}
+
 /* ---------------------------------
-   CHAMPS DE FORMULAIRE
+   CHAMPS DE FORMULAIRE (EXISTANT)
 --------------------------------- */
 .input-group {
   margin-bottom: 20px;
@@ -226,7 +288,7 @@ input:focus {
 }
 
 /* ---------------------------------
-   SÉLECTION DES RÔLES (CLÉ ESTHÉTIQUE)
+   SÉLECTION DES RÔLES (EXISTANT)
 --------------------------------- */
 .roles-selection {
   margin: 25px 0;
@@ -265,25 +327,24 @@ input:focus {
   border-color: #adb5bd;
 }
 
-/* Cacher la radio box native */
 .role-option input[type="radio"] {
   display: none;
 }
 
-/* Style de sélection (quand la radio est cochée) */
+.role-option input[type="radio"]:checked {
+  border-color: #007bff;
+  background-color: #e6f7ff;
+  box-shadow: 0 0 0 1px #007bff;
+}
+
 .role-option input[type="radio"]:checked + .role-icon,
-.role-option input[type="radio"]:checked ~ span {
-    color: #007bff; /* Assure que le texte/icône change de couleur */
+.role-option input[type="radio"]:checked ~ span { /* Cible à la fois l'icône et le texte */
+    color: #007bff;
 }
 
 .role-option input[type="radio"]:checked ~ span:not(.role-icon) {
   font-weight: 700;
-}
-
-.role-option input[type="radio"]:checked {
-  border-color: #007bff;
-  background-color: #e6f7ff; /* Légère couleur de fond */
-  box-shadow: 0 0 0 1px #007bff;
+  color: #007bff;
 }
 
 .role-icon {
@@ -292,7 +353,7 @@ input:focus {
 }
 
 /* ---------------------------------
-   BOUTON PRINCIPAL
+   BOUTON PRINCIPAL (EXISTANT)
 --------------------------------- */
 .btn-primary {
   width: 100%;
@@ -318,7 +379,7 @@ input:focus {
 }
 
 /* ---------------------------------
-   MESSAGES & FOOTER
+   MESSAGES & FOOTER (EXISTANT)
 --------------------------------- */
 .error-message {
   color: #dc3545;
@@ -352,5 +413,40 @@ input:focus {
 .separator {
   margin: 0 10px;
   color: #ced4da;
+}
+
+/* ---------------------------------
+   RESPONSIVE (AJUSTEMENTS)
+--------------------------------- */
+@media (max-width: 992px) {
+  .login-page-wrapper {
+    flex-direction: column; /* Les éléments s'empilent sur les petits écrans */
+    align-items: center;
+    padding: 30px 15px;
+    gap: 30px;
+  }
+  .illustration-section {
+    max-width: 100%;
+    order: -1; /* Place l'illustration au-dessus du formulaire sur mobile */
+    padding: 30px;
+  }
+  .login-illustration {
+      max-width: 60%; /* Ajustement pour mobile */
+  }
+  .login-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+    .roles-grid {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Plus compact sur très petits écrans */
+    }
+    .login-illustration {
+        max-width: 80%;
+    }
+    .illustration-text {
+        font-size: 1rem;
+    }
 }
 </style>
