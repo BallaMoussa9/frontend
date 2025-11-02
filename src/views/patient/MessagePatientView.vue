@@ -222,7 +222,7 @@ const getRecipientPhoto = (user) => {
     const photoPath = user?.profile_photo_path;
     if (photoPath) {
         const cleanedPath = photoPath.startsWith('public/') ? photoPath.substring(7) : photoPath;
-        return `http://localhost:8000/storage/${cleanedPath}`;
+        return `baseURL: 'https://santeko-api.onrender.com/api/storage/${cleanedPath}`;
     }
 
     return 'https://via.placeholder.com/40/002580/ffffff?text=U';
