@@ -4,7 +4,6 @@
   </div>
 
   <div v-else-if="hasProfileId && isPatientRole" class="layout-wrapper">
-    <!-- Sidebar fixe -->
     <aside class="sidebar">
       <nav>
         <ul>
@@ -42,7 +41,6 @@
       </nav>
     </aside>
 
-    <!-- Contenu principal -->
     <main class="main-content">
       <AppLayout :withSidebar="true">
         <slot />
@@ -92,10 +90,10 @@ const isPatientRole = computed(() =>
 /* Sidebar fixe */
 .sidebar {
   position: fixed;
-  top: 0;
+  top: 64px; /* CORRECTION: Décalage de 64px (hauteur du AppLayout topbar) */
   left: 0;
   width: 220px;
-  height: 100vh;
+  height: calc(100vh - 64px); /* CORRECTION: Hauteur ajustée */
   background-color: #002580;
   padding: 20px;
   color: white;
