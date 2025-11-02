@@ -124,14 +124,12 @@
     </section>
   </SidebarLayout>
 </template>
-
 <script setup>
 import SidebarLayout from '@/layouts/SidebarLayout.vue'
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { useChatStore } from '@/stores/chatStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStores'
-import { storeToRefs } from 'pinia';
 
 const chatStore = useChatStore()
 const userStore = useUserStore()
@@ -161,7 +159,6 @@ const filteredUsers = computed(() => {
     );
 });
 
-
 const fetchAllUsers = async () => {
     if (userStore.allUsers.length === 0) {
         await userStore.fetchAllUsers();
@@ -174,17 +171,17 @@ const searchUsers = () => {
     }
 };
 
+
 // ------------------- Logique Chat -------------------
 
-// Fonction pour identifier le destinataire dans une conversation
 const getRecipientFromConv = (conv) => {
     const currentUserId = authStore.user?.id;
     return conv.users.find(u => u.id !== currentUserId) || conv.users[0];
 }
 
-
+// ✅ Correction ici — on appelle la méthode existante du store
 const startChat = (user) => {
-    chatStore.startChatWithUserId(user.id);
+    chatStore.startChatWithUser(user);
     activeTab.value = 'conversations';
     searchQuery.value = '';
 };
@@ -196,7 +193,6 @@ const scrollToBottom = () => {
   nextTick(() => {
     const thread = chatThreadRef.value;
     if (thread) {
-      // Défilement en bas du fil de discussion (car les messages sont affichés du plus ancien au plus récent)
       thread.scrollTop = thread.scrollHeight;
     }
   });
@@ -219,28 +215,16 @@ const formatTime = (isoString) => {
     return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-/**
- * 🔑 CORRECTION CRUCIALE pour le chargement des photos
- * Construit l'URL complète de la photo de profil.
- */
 const getRecipientPhoto = (user) => {
-    // 1. Priorité à l'URL complète fournie par le backend
     const photoUrl = user?.profile_photo_url;
-    if (photoUrl) {
-        return photoUrl;
-    }
+    if (photoUrl) return photoUrl;
 
-    // 2. Utilisation du chemin relatif (profile_photo_path)
     const photoPath = user?.profile_photo_path;
     if (photoPath) {
-        // Nettoyer le chemin
         const cleanedPath = photoPath.startsWith('public/') ? photoPath.substring(7) : photoPath;
-
-        // **ATTENTION : MODIFIEZ 'http://localhost:8000' si votre serveur utilise un autre domaine/port**
         return `http://localhost:8000/storage/${cleanedPath}`;
     }
 
-    // 3. URL par défaut
     return 'https://via.placeholder.com/40/002580/ffffff?text=U';
 };
 
@@ -264,8 +248,8 @@ watch(
         scrollToBottom();
     }
 );
-
 </script>
+
 
 <style scoped>
 /* Conteneur et titres */
