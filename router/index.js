@@ -154,9 +154,12 @@ const routes = [
     component: () => import('../src/views/admin/AjouterLabTchnicians.vue'),
   },
 {
-  path: '/admin/SeenDossiert/',
+  path: '/admin/SeenDossiert/:id',
   name: 'SeenDossiert',
   component: () => import('../src/views/admin/VoirDossierMedical.vue'),
+  props: true,
+  meta: { requiresAuth: true, role: 'admin' },
+
 },
 {
   path: '/admin/SeenRapport/',
