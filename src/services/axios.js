@@ -2,8 +2,8 @@
 import axios from 'axios'
 
 const API = axios.create({
-  //baseURL: 'http://localhost:8000/api',
-  baseURL: 'https://santeko-api.onrender.com/api',
+  baseURL: 'http://localhost:8000/api',
+  //baseURL: 'https://santeko-api.onrender.com/api',
 })
 
 // Injecter automatiquement le token à chaque requête

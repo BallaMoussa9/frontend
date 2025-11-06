@@ -413,6 +413,31 @@ const routes = [
     meta: { requiresAuth: true, role: 'patient' },
     props: true,
   },
+  //-----------------------urgentiste---------------------------------
+  {
+      path: '/urgentiste/dashboard',
+      name: 'UrgentisteDashboard',
+      component: () => import('@/views/urgentist/UrgentisteDashboard.vue'),
+      meta: { requiresAuth: true, requiredRole: 'urgentist' }, // S'assurer que seul l'urgentiste y accède
+    },
+    {
+      path: '/urgentiste/alerts/', // Route dynamique pour les détails
+      name: 'AlerteDetail',
+      component: () => import('@/views/urgentist/AlerteDetailView.vue'),
+      meta: { requiresAuth: true, requiredRole: 'urgentist' },
+    },
+    {
+      path: '/urgentiste/historique',
+      name: 'UrgentisteHistorique',
+      component: () => import('@/views/urgentist/HistoriqueView.vue'),
+      meta: { requiresAuth: true, requiredRole: 'urgentist' },
+    },
+    {
+      path: '/urgentiste/profile',
+      name: 'UrgentisteProfile',
+      component: () => import('@/views/urgentist/ProfileView.vue'),// C'est ici que le composant est lié
+      meta: { requiresAuth: true, requiredRole: 'urgentist' },
+    },
 ]
 
 const router = createRouter({

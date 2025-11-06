@@ -1,9 +1,10 @@
 <template>
   <AppLayout>
-    <div class="login-page-wrapper"> <div class="illustration-section">
+    <div class="login-page-wrapper">
+      <div class="illustration-section">
         <img src="/santeko.png" alt="Illustration Santeko" class="login-illustration" />
         <p class="illustration-text">
-          Votre santé, notre priorité. <br/>
+          Votre santé, notre priorité. <br />
           SanTeKo, le futur de la santé connectée.
         </p>
       </div>
@@ -41,12 +42,10 @@
                   <input type="radio" v-model="role" value="nurse" required />
                   <span class="role-icon">💉</span> Infirmier
                 </label>
-
                 <label class="role-option">
                   <input type="radio" v-model="role" value="urgentist" required />
                   <span class="role-icon">🚑</span> Urgentiste
                 </label>
-
                 <label class="role-option">
                   <input type="radio" v-model="role" value="lab_technician" required />
                   <span class="role-icon">🧪</span> Laboratoire
@@ -59,7 +58,6 @@
                   <input type="radio" v-model="role" value="admin" required />
                   <span class="role-icon">⚙️</span> Admin
                 </label>
-
               </div>
             </div>
 
@@ -90,12 +88,11 @@ import { useUserStore } from '@/stores/userStore'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
-
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const email = ref('')
 const password = ref('')
-const role = ref('patient')
+const role = ref('patient') // Rôle par défaut
 const router = useRouter()
 const isFetchingProfileId = ref(false)
 
@@ -104,120 +101,176 @@ async function seConnecter() {
   authStore.authError = null;
   console.log("--- Début de la connexion ---");
 
+  // Vérifie si un rôle a été sélectionné (même si 'required' est dans le template)
+  if (!role.value) {
+    authStore.authError = "Veuillez sélectionner un rôle pour vous connecter.";
+    return;
+  }
+
   try {
+    // 1. Tente l'authentification
     const response = await authStore.login({
       email: email.value,
       password: password.value,
       role: role.value
-    })
+    });
 
     const userId = response.user.id;
-    const roleName = response.role_name;
-    const roleId = response.role_id;
+    const roleName = response.role_name; // Rôle confirmé par le backend
+    
     console.log(`Authentification réussie. Utilisateur ID: ${userId}, Rôle: ${roleName}`);
 
     let finalProfileId = userId;
-
     isFetchingProfileId.value = true;
 
+    // 2. Récupération de l'ID de profil spécifique au rôle
     try {
-        let profileIdFound = null;
+      let profileIdFound = null;
 
-        if (roleName === 'patient') {
-            profileIdFound = await userStore.fetchPatientByUserId(userId);
-        } else if (roleName === 'doctor') {
-            profileIdFound = await userStore.fetchDoctorByUserId(userId);
-        } else if (roleName === 'nurse') {
-            profileIdFound = await userStore.fetchNurseByUserId(userId);
-        } else if (roleName === 'urgentist') {
-            profileIdFound = await userStore.fetchUrgentistByUserId(userId);
-        } else if (roleName === 'lab_technician') {
-            // TODO: Assurez-vous d'avoir cette méthode dans userStore
-            profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
-        } else if (roleName === 'accountant') {
-            // TODO: Assurez-vous d'avoir cette méthode dans userStore
-            profileIdFound = await userStore.fetchAccountantByUserId(userId);
-        }
-        // Pour Admin, l'ID utilisateur est souvent suffisant ou géré différemment.
-        // Si vous avez un AdminId spécifique, ajoutez la logique ici :
-        // else if (roleName === 'admin') {
-        //     profileIdFound = await userStore.fetchAdminByUserId(userId);
-        // }
+      if (roleName === 'patient') {
+        profileIdFound = await userStore.fetchPatientByUserId(userId);
+      } else if (roleName === 'doctor') {
+        profileIdFound = await userStore.fetchDoctorByUserId(userId);
+      } else if (roleName === 'nurse') {
+        profileIdFound = await userStore.fetchNurseByUserId(userId);
+      } else if (roleName === 'urgentist') {
+        profileIdFound = await userStore.fetchUrgentistByUserId(userId);
+      } else if (roleName === 'lab_technician') {
+        profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
+      } else if (roleName === 'accountant') {
+        profileIdFound = await userStore.fetchAccountantByUserId(userId);
+      } 
+      // Admin utilise généralement l'ID utilisateur comme ID de profil
 
-
-        if (profileIdFound) {
-            finalProfileId = profileIdFound;
-        }
-
+      if (profileIdFound) {
+        finalProfileId = profileIdFound;
+      }
     } catch (fetchError) {
-        console.error(`❌ Échec de la récupération du profil spécifique (${roleName}). Utilisation de l'ID Utilisateur comme fallback.`, fetchError);
+      console.error(`❌ Échec de la récupération du profil spécifique (${roleName}).`, fetchError);
     } finally {
-        isFetchingProfileId.value = false;
+      isFetchingProfileId.value = false;
     }
 
     if (finalProfileId) {
-        authStore.setProfileId(finalProfileId);
-        console.log(`✅ ID de profil (${roleName}) stocké: ${finalProfileId}`);
+      authStore.setProfileId(finalProfileId);
+      console.log(`✅ ID de profil (${roleName}) stocké: ${finalProfileId}`);
     }
 
+    // 3. LOGIQUE DE REDIRECTION CONDITIONNELLE
+    let redirectionRouteName;
+
+    switch (roleName) {
+      case 'patient':
+        redirectionRouteName = 'PatientDashboard';
+        break;
+      case 'doctor':
+        redirectionRouteName = 'DoctorDashboard';
+        break;
+      case 'nurse':
+        redirectionRouteName = 'NurseDashboard';
+        break;
+      case 'urgentist':
+        redirectionRouteName = 'UrgentisteDashboard'; // Route Urgentiste (comme demandé)
+        break;
+      case 'lab_technician':
+        redirectionRouteName = 'LabDashboard';
+        break;
+      case 'accountant':
+        redirectionRouteName = 'AccountantDashboard';
+        break;
+      case 'admin':
+        redirectionRouteName = 'AdminDashboard';
+        break;
+      default:
+        redirectionRouteName = 'Home'; 
+        console.warn(`Rôle non géré pour la redirection : ${roleName}. Redirection vers la page d'accueil.`);
+        break;
+    }
+
+    await router.push({ name: redirectionRouteName });
+    console.log(`✅ Redirection vers : ${redirectionRouteName}`);
 
   } catch (error) {
-    console.error('❌ Erreur de connexion (front-end) :', error.message);
-    authStore.authError = error.message || "Une erreur est survenue lors de la connexion.";
+    // Gestion des erreurs spécifiques (comme le 422)
+    let errorMessage = "Identifiants invalides ou une erreur inconnue est survenue.";
+
+    if (error.response && error.response.data) {
+        const data = error.response.data;
+        
+        // Cas 1: Identifiants invalides (le message général)
+        if (data.message && data.message.includes("Identifiants invalides")) {
+            errorMessage = "Email ou mot de passe incorrect. Veuillez vérifier vos informations.";
+        } 
+        // Cas 2: Rôle invalide (erreur spécifique 422)
+        else if (data.message && data.message.includes("rôle sélectionné est invalide")) {
+            errorMessage = "Le rôle sélectionné n'est pas associé à cet utilisateur ou est invalide.";
+        }
+        // Cas 3: Autres erreurs de validation
+        else if (data.message) {
+            errorMessage = data.message;
+        }
+    } else {
+        // Erreur réseau ou autre
+        errorMessage = error.message;
+    }
+
+    console.error('❌ Erreur de connexion (front-end) :', error);
+    authStore.authError = errorMessage;
     isFetchingProfileId.value = false;
   }
   console.log("--- Fin de la connexion ---");
 }
-
 </script>
 
 <style scoped>
+/* (Le CSS reste inchangé et est inclus ci-dessous pour le composant complet) */
+
 /* ---------------------------------
-   GLOBAL LAYOUT (NOUVEAU)
+    GLOBAL LAYOUT (NOUVEAU)
 --------------------------------- */
 .login-page-wrapper {
-  display: flex; /* Utilisation de flexbox pour aligner côte à côte */
+  display: flex;
   justify-content: center;
-  align-items: stretch; /* Les éléments s'étirent sur la hauteur */
+  align-items: stretch;
   min-height: 100vh;
   background-color: #f0f4f8;
-  padding: 50px 20px; /* Ajout de padding global */
-  gap: 40px; /* Espace entre l'image et le formulaire */
+  padding: 50px 20px;
+  gap: 40px;
 }
 
 /* Section illustration */
 .illustration-section {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    max-width: 500px; /* Taille max pour l'illustration */
-    text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #e6f7ff, #cceeff); /* Fond dégradé doux */
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  max-width: 500px;
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #e6f7ff, #cceeff);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .login-illustration {
-    max-width: 80%; /* Ajuste la taille de l'image dans sa section */
-    height: auto;
-    margin-bottom: 30px;
+  max-width: 80%;
+  height: auto;
+  margin-bottom: 30px;
 }
 
 .illustration-text {
-    font-size: 1.2rem;
-    color: #003366;
-    font-weight: 600;
-    line-height: 1.5;
+  font-size: 1.2rem;
+  color: #003366;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
-/* Conteneur du formulaire (Styles existants, mais dans le nouveau flux) */
+/* Conteneur du formulaire */
 .login-container {
-  display: flex; /* Maintient le centrage du formulaire dans sa colonne */
+  display: flex;
   justify-content: center;
   align-items: center;
-  flex-grow: 1; /* Permet au conteneur du formulaire de prendre l'espace restant */
+  flex-grow: 1;
 }
 
 .login-card {
@@ -226,12 +279,12 @@ async function seConnecter() {
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 420px; /* Garde la largeur du formulaire */
+  max-width: 420px;
   transition: transform 0.3s ease;
 }
 
 /* ---------------------------------
-   TYPOGRAPHIE & HEADER (FORMULAIRE)
+    TYPOGRAPHIE & HEADER (FORMULAIRE)
 --------------------------------- */
 .header {
   text-align: center;
@@ -250,14 +303,8 @@ async function seConnecter() {
   color: #6c757d;
 }
 
-/* Le .santeko-logo n'est plus dans le .header du formulaire */
-/* Supprimer les styles .santeko-logo si vous ne l'utilisez plus */
-.santeko-logo {
-    display: none; /* Cache l'ancien logo si besoin */
-}
-
 /* ---------------------------------
-   CHAMPS DE FORMULAIRE (EXISTANT)
+    CHAMPS DE FORMULAIRE (EXISTANT)
 --------------------------------- */
 .input-group {
   margin-bottom: 20px;
@@ -288,7 +335,7 @@ input:focus {
 }
 
 /* ---------------------------------
-   SÉLECTION DES RÔLES (EXISTANT)
+    SÉLECTION DES RÔLES (EXISTANT)
 --------------------------------- */
 .roles-selection {
   margin: 25px 0;
@@ -338,8 +385,8 @@ input:focus {
 }
 
 .role-option input[type="radio"]:checked + .role-icon,
-.role-option input[type="radio"]:checked ~ span { /* Cible à la fois l'icône et le texte */
-    color: #007bff;
+.role-option input[type="radio"]:checked ~ span {
+  color: #007bff;
 }
 
 .role-option input[type="radio"]:checked ~ span:not(.role-icon) {
@@ -348,12 +395,12 @@ input:focus {
 }
 
 .role-icon {
-    font-size: 1.2em;
-    margin-right: 5px;
+  font-size: 1.2em;
+  margin-right: 5px;
 }
 
 /* ---------------------------------
-   BOUTON PRINCIPAL (EXISTANT)
+    BOUTON PRINCIPAL (EXISTANT)
 --------------------------------- */
 .btn-primary {
   width: 100%;
@@ -379,7 +426,7 @@ input:focus {
 }
 
 /* ---------------------------------
-   MESSAGES & FOOTER (EXISTANT)
+    MESSAGES & FOOTER (EXISTANT)
 --------------------------------- */
 .error-message {
   color: #dc3545;
@@ -416,22 +463,22 @@ input:focus {
 }
 
 /* ---------------------------------
-   RESPONSIVE (AJUSTEMENTS)
+    RESPONSIVE (AJUSTEMENTS)
 --------------------------------- */
 @media (max-width: 992px) {
   .login-page-wrapper {
-    flex-direction: column; /* Les éléments s'empilent sur les petits écrans */
+    flex-direction: column;
     align-items: center;
     padding: 30px 15px;
     gap: 30px;
   }
   .illustration-section {
     max-width: 100%;
-    order: -1; /* Place l'illustration au-dessus du formulaire sur mobile */
+    order: -1;
     padding: 30px;
   }
   .login-illustration {
-      max-width: 60%; /* Ajustement pour mobile */
+    max-width: 60%;
   }
   .login-card {
     max-width: 100%;
@@ -439,14 +486,14 @@ input:focus {
 }
 
 @media (max-width: 576px) {
-    .roles-grid {
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Plus compact sur très petits écrans */
-    }
-    .login-illustration {
-        max-width: 80%;
-    }
-    .illustration-text {
-        font-size: 1rem;
-    }
+  .roles-grid {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  }
+  .login-illustration {
+    max-width: 80%;
+  }
+  .illustration-text {
+    font-size: 1rem;
+  }
 }
 </style>
