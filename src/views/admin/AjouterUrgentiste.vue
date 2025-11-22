@@ -158,7 +158,7 @@ const submit = async () => {
   try {
     await urgentistStore.createUrgentist(data);
     // On peut ajouter une redirection après le succès si nécessaire
-    // router.push({ name: 'NomDeLaRouteDeListe' });
+    // router.push({ name: 'Urgence' });
   } catch (error) {
     console.error('Erreur création urgentiste:', error);
   }
