@@ -101,7 +101,6 @@ async function seConnecter() {
   authStore.authError = null;
   console.log("--- Début de la connexion ---");
 
-  // Vérifie si un rôle a été sélectionné (même si 'required' est dans le template)
   if (!role.value) {
     authStore.authError = "Veuillez sélectionner un rôle pour vous connecter.";
     return;
@@ -115,12 +114,12 @@ async function seConnecter() {
       role: role.value
     });
 
-    const userId = response.user.id;
-    const roleName = response.role_name; // Rôle confirmé par le backend
+    const userId = response.user.id; // L'ID d'utilisateur brut (UID)
+    const roleName = response.role_name; 
     
     console.log(`Authentification réussie. Utilisateur ID: ${userId}, Rôle: ${roleName}`);
 
-    let finalProfileId = userId;
+    let finalProfileId = userId; // Par défaut, on utilise l'ID utilisateur
     isFetchingProfileId.value = true;
 
     // 2. Récupération de l'ID de profil spécifique au rôle
@@ -134,16 +133,15 @@ async function seConnecter() {
       } else if (roleName === 'nurse') {
         profileIdFound = await userStore.fetchNurseByUserId(userId);
       } else if (roleName === 'urgentist') {
-        profileIdFound = await userStore.fetchUrgentistByUserId(userId);
+        profileIdFound = await userStore.fetchUrgentistByUserId(userId); 
       } else if (roleName === 'lab_technician') {
         profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
       } else if (roleName === 'accountant') {
         profileIdFound = await userStore.fetchAccountantByUserId(userId);
-      } 
-      // Admin utilise généralement l'ID utilisateur comme ID de profil
+      }
 
       if (profileIdFound) {
-        finalProfileId = profileIdFound;
+        finalProfileId = profileIdFound; // ID de profil spécifique stocké
       }
     } catch (fetchError) {
       console.error(`❌ Échec de la récupération du profil spécifique (${roleName}).`, fetchError);
@@ -152,65 +150,80 @@ async function seConnecter() {
     }
 
     if (finalProfileId) {
-      authStore.setProfileId(finalProfileId);
+      // Stocke l'ID de profil/métier pour l'accès aux données internes
+      authStore.setProfileId(finalProfileId); 
       console.log(`✅ ID de profil (${roleName}) stocké: ${finalProfileId}`);
     }
 
     // 3. LOGIQUE DE REDIRECTION CONDITIONNELLE
     let redirectionRouteName;
+    let needsProfileId = false; 
+    let redirectionId = finalProfileId; // Par défaut, on utilise l'ID de profil (doctor_id, patient_id, etc.)
 
     switch (roleName) {
       case 'patient':
         redirectionRouteName = 'PatientDashboard';
+        needsProfileId = true;
         break;
       case 'doctor':
         redirectionRouteName = 'DoctorDashboard';
+        needsProfileId = true;
+        // redirectionId reste finalProfileId (l'ID du docteur)
         break;
       case 'nurse':
         redirectionRouteName = 'NurseDashboard';
+        needsProfileId = true;
         break;
       case 'urgentist':
-        redirectionRouteName = 'UrgentisteDashboard'; // Route Urgentiste (comme demandé)
+        redirectionRouteName = 'UrgentisteDashboard';
+        needsProfileId = true;
+        // 🚨 Correction pour Urgentiste : Utilise l'ID utilisateur (userId)
+        redirectionId = userId; 
         break;
       case 'lab_technician':
         redirectionRouteName = 'LabDashboard';
+        needsProfileId = true;
         break;
       case 'accountant':
         redirectionRouteName = 'AccountantDashboard';
+        needsProfileId = true;
         break;
       case 'admin':
         redirectionRouteName = 'AdminDashboard';
         break;
       default:
-        redirectionRouteName = 'Home'; 
+        redirectionRouteName = 'Home';
         console.warn(`Rôle non géré pour la redirection : ${roleName}. Redirection vers la page d'accueil.`);
         break;
     }
 
-    await router.push({ name: redirectionRouteName });
-    console.log(`✅ Redirection vers : ${redirectionRouteName}`);
+    // Redirection
+    if (needsProfileId) {
+        await router.push({ 
+            name: redirectionRouteName, 
+            params: { id: redirectionId } // redirectionId est soit finalProfileId (Docteur), soit userId (Urgentiste)
+        });
+        console.log(`✅ Redirection vers : ${redirectionRouteName} avec ID de redirection: ${redirectionId}`);
+    } else {
+        await router.push({ name: redirectionRouteName });
+        console.log(`✅ Redirection vers : ${redirectionRouteName}`);
+    }
+
 
   } catch (error) {
-    // Gestion des erreurs spécifiques (comme le 422)
     let errorMessage = "Identifiants invalides ou une erreur inconnue est survenue.";
 
     if (error.response && error.response.data) {
         const data = error.response.data;
         
-        // Cas 1: Identifiants invalides (le message général)
         if (data.message && data.message.includes("Identifiants invalides")) {
             errorMessage = "Email ou mot de passe incorrect. Veuillez vérifier vos informations.";
-        } 
-        // Cas 2: Rôle invalide (erreur spécifique 422)
-        else if (data.message && data.message.includes("rôle sélectionné est invalide")) {
+        } else if (data.message && data.message.includes("rôle sélectionné est invalide")) {
             errorMessage = "Le rôle sélectionné n'est pas associé à cet utilisateur ou est invalide.";
-        }
-        // Cas 3: Autres erreurs de validation
-        else if (data.message) {
+        } else if (data.message) {
             errorMessage = data.message;
         }
     } else {
-        // Erreur réseau ou autre
         errorMessage = error.message;
     }
 
@@ -223,10 +236,8 @@ async function seConnecter() {
 </script>
 
 <style scoped>
-/* (Le CSS reste inchangé et est inclus ci-dessous pour le composant complet) */
-
 /* ---------------------------------
-    GLOBAL LAYOUT (NOUVEAU)
+    GLOBAL LAYOUT
 --------------------------------- */
 .login-page-wrapper {
   display: flex;
@@ -480,8 +491,8 @@ input:focus {
   .login-illustration {
     max-width: 60%;
   }
-  .login-card {
-    max-width: 100%;
+  .illustration-text {
+    font-size: 1rem;
   }
 }
 

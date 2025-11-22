@@ -90,7 +90,7 @@ const routes = [
 
   {
     path: '/admin/Department',
-    name: 'Department',
+    name: 'Department', 
     component: () => import('../src/views/admin/GererDepartements.vue'),
   },
   {
@@ -301,21 +301,19 @@ const routes = [
     component: () => import('@/views/nurse/NurseDashboardView.vue'),
     meta: { requiresAuth: true, role: 'nurse' },
     props: true,
-  },
+  }, 
   {
     path: '/nurse/patients/:id',
     name: 'PatientList',
     component: () => import('@/views/nurse/PatientListView.vue'), // Utilisez le composant que vous avez nommé
     meta: { requiresAuth: true, role: 'nurse' },
     props: true,
-  },
+  }, 
   {
-    path: '/nurse/patient/:id',
-    name: 'PatientDetails',
-    component: () => import('@/views/nurse/PatientDetailsView.vue'),
-    meta: { requiresAuth: true, role: 'nurse' },
-    props:true,
-  },
+  path: '/nurse/:idNurse/patient/:idPatient',
+  name: 'NursePatientDetails',
+  component: () => import('@/views/nurse/PatientDetailsView.vue'),
+},
   {
     path: '/nurse/vitals/:id',
     name: 'VitalSignsForm',
@@ -327,7 +325,7 @@ const routes = [
     path: '/nurse/notes/:id',
     name: 'CareNotes',
     component: () => import('@/views/nurse/CareNotesView.vue'),
-    meta: { requiresAuth: true, role: 'nurse' },
+    meta: { requiresAuth: true, role: 'nurse' }, 
     props: true,
   },
   {
@@ -358,11 +356,7 @@ const routes = [
     meta: { requiresAuth: true, role: 'nurse' },
     props: true,
   },
-  {
-  path: '/nurse/:idNurse/patient/:idPatient',
-  name: 'NursePatientDetails',
-  component: () => import('@/views/nurse/PatientDetailsView.vue'),
-},
+ 
 
   //------------------------------------------Patient
   {
@@ -415,28 +409,32 @@ const routes = [
   },
   //-----------------------urgentiste---------------------------------
   {
-      path: '/urgentiste/dashboard',
+      path: '/urgentiste/dashboard/:id',
       name: 'UrgentisteDashboard',
       component: () => import('@/views/urgentist/UrgentisteDashboard.vue'),
       meta: { requiresAuth: true, requiredRole: 'urgentist' }, // S'assurer que seul l'urgentiste y accède
+      props:true,
     },
     {
-      path: '/urgentiste/alerts/', // Route dynamique pour les détails
-      name: 'AlerteDetail',
-      component: () => import('@/views/urgentist/AlerteDetailView.vue'),
-      meta: { requiresAuth: true, requiredRole: 'urgentist' },
-    },
+    path: '/urgentiste/:urgentistId/alerte/:alertId', // Notez les noms clairs des paramètres
+    name: 'AlerteDetail',
+    component: () => import('@/views/urgentist/AlerteDetailView.vue'),
+    meta: { requiresAuth: true, requiredRole: 'urgentist' },
+    props: true, // Ceci transmettra urgentistId et alertId comme props au composant
+  },
     {
-      path: '/urgentiste/historique',
+      path: '/urgentiste/historique/:id',
       name: 'UrgentisteHistorique',
       component: () => import('@/views/urgentist/HistoriqueView.vue'),
       meta: { requiresAuth: true, requiredRole: 'urgentist' },
+      props:true,
     },
     {
-      path: '/urgentiste/profile',
+      path: '/urgentiste/profile/:id',
       name: 'UrgentisteProfile',
       component: () => import('@/views/urgentist/ProfileView.vue'),// C'est ici que le composant est lié
       meta: { requiresAuth: true, requiredRole: 'urgentist' },
+      props:true,
     },
 ]
 

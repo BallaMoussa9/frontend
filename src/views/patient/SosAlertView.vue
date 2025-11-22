@@ -19,8 +19,8 @@
         </button>
       </div>
 
-      <div v-if="error" class="alert-error">{{ error }}</div>
-      <div v-if="success" class="alert-success">{{ success }}</div>
+      <div v-if="error || sosAlertsStore.error" class="alert-error">{{ error || sosAlertsStore.error }}</div>
+      <div v-if="success || sosAlertsStore.success" class="alert-success">{{ success || sosAlertsStore.success }}</div>
 
       <div class="location-box" v-if="coords">
         <h2>📍 Position actuelle</h2>
@@ -35,12 +35,16 @@
 <script setup>
 import SidebarLayout from '@/layouts/SidebarLayout.vue'
 import { ref } from 'vue'
-import { useUrgentistStore } from '@/stores/urgentistStore'
+// 🔑 CORRECTION : Utiliser le store correct qui contient la fonction
+import { useSosAlertsStore } from '@/stores/SosAlertsStore' 
 
-const urgentistStore = useUrgentistStore()
+// 🔑 CORRECTION : Renommer la variable du store
+const sosAlertsStore = useSosAlertsStore()
 const coords = ref(null)
+// Maintenons les erreurs/succès locaux, mais ajoutons aussi ceux du store
 const error = ref(null)
 const success = ref(null)
+// Utiliser le loading state du store ou maintenir un état local
 const isSending = ref(false)
 
 // Fonction utilitaire pour récupérer la position avec retry
@@ -70,8 +74,10 @@ async function getPositionWithRetry(retries = 3, delay = 2000) {
 }
 
 async function sendAlert() {
+  // Réinitialiser les messages locaux et du store
   error.value = null
   success.value = null
+  sosAlertsStore.resetFeedback()
 
   if (isSending.value) return
   isSending.value = true
@@ -96,12 +102,17 @@ async function sendAlert() {
       }
     }
 
-    // Déclencher l’alerte SOS via le store
-    await urgentistStore.triggerSOSAlert(latitude, longitude)
-    success.value = 'Votre alerte SOS a été envoyée aux services d’urgence.'
+    // 🔑 NOUVEL APPEL CORRECT : Utilisation de l'action du store useSosAlertsStore
+    await sosAlertsStore.triggerSOSAlert(latitude, longitude)
+    
+    // Le message de succès sera géré par le store et affiché par la variable liée au store
   } catch (err) {
     console.error('Erreur lors de l’envoi de l’alerte SOS :', err)
-    error.value = err.message || 'Une erreur est survenue lors de l’envoi de l’alerte SOS.'
+    // Le message d'erreur du store sera affiché via sosAlertsStore.error
+    // Nous pouvons aussi ajouter un message générique local au cas où
+    if (!sosAlertsStore.error) {
+        error.value = err.message || 'Une erreur est survenue lors de l’envoi de l’alerte SOS.'
+    }
   } finally {
     isSending.value = false
   }
@@ -109,6 +120,7 @@ async function sendAlert() {
 </script>
 
 <style scoped>
+/* (Le style reste inchangé) */
 .sos-section {
   max-width: 600px;
   margin: auto;

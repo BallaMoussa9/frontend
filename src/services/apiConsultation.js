@@ -4,23 +4,35 @@ import API from '@/services/axios';
 
 const apiConsultation = {
 
-  /**
-   * Démarre une nouvelle consultation.
-   * POST /api/patients/{patientId}/consultations/start
-   * @param {number} patientId - L'ID du patient (de la route)
-   * @param {object} startData - Données initiales (type, motif)
-   * @returns {Promise<object>} La consultation démarrée
+ /**
+ * Démarre une nouvelle consultation.
+ * POST /api/doctor/{doctorId}/patients/{patientId}/consultations/start
+ */
+async startConsultation(doctorId, patientId, startData) {
+  try {
+    const response = await API.post(`/doctor/${doctorId}/patients/${patientId}/consultations/start`, startData);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors du démarrage de la consultation:", error);
+    throw error;
+  }
+},
+ /**
+   * 🚨 NOUVELLE MÉTHODE : Vérifie s'il existe une consultation valide pour émettre une ordonnance
+   * GET /api/doctors/{doctorId}/patients/{patientId}/consultations/check
+   * @param {number} doctorId - L'ID du docteur
+   * @param {number} patientId - L'ID du patient
+   * @returns {Promise<object>} Résultat de la vérification
    */
-  async startConsultation(patientId, startData) {
+  async checkValidConsultation(doctorId, patientId) {
     try {
-      const response = await API.post(`/patients/${patientId}/consultations/start`, startData);
-      return response.data; // { message: ..., consultation: {} }
+      const response = await API.get(`/doctors/${doctorId}/patients/${patientId}/consultations/check`);
+      return response.data;
     } catch (error) {
-      console.error("Erreur lors du démarrage de la consultation:", error);
+      console.error("Erreur lors de la vérification de la consultation:", error);
       throw error;
     }
   },
-
   /**
    * Termine une consultation.
    * PUT /api/consultations/{consultationId}/end

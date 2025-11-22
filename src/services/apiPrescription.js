@@ -1,10 +1,25 @@
 // src/services/apiPrescription.js
-
-// 🚨 Assurez-vous que ce chemin est correct pour votre instance Axios
 import API from '@/services/axios';
 
-const apiPrescription = {
+/**
+ * Crée une nouvelle prescription avec ses lignes.
+ * POST /api/doctors/{doctorId}/patients/{patientId}/prescriptions
+ * @param {number} doctorId - L'ID du docteur authentifié (de l'URL)
+ * @param {number} patientId - L'ID du patient cible (de l'URL)
+ * @param {object} prescriptionData - Données de la prescription (inclut 'lines')
+ * @returns {Promise<object>} La prescription créée
+ */
+export const createPrescription = async (doctorId, patientId, prescriptionData) => {
+    try {
+        const response = await API.post(`/doctors/${doctorId}/patients/${patientId}/prescriptions`, prescriptionData);
+        return response.data;
+    } catch (error) {
+        console.error('Erreur création prescription:', error);
+        throw error;
+    }
+};
 
+const apiPrescription = {
   /**
    * Crée une nouvelle prescription avec ses lignes.
    * POST /api/doctors/{doctorId}/patients/{patientId}/prescriptions
@@ -16,12 +31,13 @@ const apiPrescription = {
   async createPrescription(doctorId, patientId, prescriptionData) {
     try {
       const response = await API.post(`/doctors/${doctorId}/patients/${patientId}/prescriptions`, prescriptionData);
-      return response.data; // Retourne { message: ..., data: prescription }
+      return response.data;
     } catch (error) {
-      console.error("Erreur lors de la création de la prescription:", error);
+      console.error('Erreur création prescription:', error);
       throw error;
     }
   },
+
   /**
    * Récupère toutes les prescriptions pour un patient donné.
    * GET /api/patients/{patientId}/prescriptions
@@ -29,16 +45,14 @@ const apiPrescription = {
    * @returns {Promise<Array>} Un tableau de prescriptions (peut être vide)
    */
   async fetchPatientPrescriptions(patientId) {
-        try {
-            const response = await API.get(`/patients/${patientId}/prescriptions`);
-            // 🚨 CONSERVATION DE CETTE LIGNE, ELLE EST CORRECTE ET ESSENTIELLE
-            console.log("Réponse de l'API pour les prescriptions du patient:", response.data);
-            return response.data; // Retourne UNIQUEMENT le tableau de données (ou [] si vide)
-        } catch (error) {
-            // Propager l'erreur pour que le store puisse la gérer
-            throw error;
-        }
-    },
+    try {
+      const response = await API.get(`/patients/${patientId}/prescriptions`);
+      console.log("Réponse de l'API pour les prescriptions du patient:", response.data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   /**
    * Récupère une prescription spécifique pour un patient donné.
@@ -67,7 +81,7 @@ const apiPrescription = {
   async updatePrescription(prescriptionId, updateData) {
     try {
       const response = await API.patch(`/prescriptions/${prescriptionId}`, updateData);
-      return response.data; // Retourne { message: ..., data: prescription }
+      return response.data;
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la prescription:", error);
       throw error;
@@ -83,7 +97,6 @@ const apiPrescription = {
   async deletePrescription(prescriptionId) {
     try {
       await API.delete(`/prescriptions/${prescriptionId}`);
-      // Aucune donnée retournée pour un 204 No Content
     } catch (error) {
       console.error("Erreur lors de la suppression de la prescription:", error);
       throw error;

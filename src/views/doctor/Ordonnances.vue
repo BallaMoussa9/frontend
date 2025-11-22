@@ -150,16 +150,14 @@ import { usePatientStore } from '@/stores/patientStore'
 import { usePrescriptionStore } from '@/stores/prescriptionStore'
 import { useAuthStore } from '@/stores/authStores' 
 import { useUserStore } from '@/stores/userStore' 
-// 🚨 Import de useRoute pour lire l'ID du docteur depuis l'URL
 import { useRoute } from 'vue-router' 
 
 // --- Stores ---
 const patientStore = usePatientStore()
 const prescriptionStore = usePrescriptionStore()
-// Les stores Auth et User ne sont pas directement utilisés pour l'ID du docteur dans ce flux
 const authStore = useAuthStore() 
 const userStore = useUserStore() 
-const route = useRoute() // Initialiser le routeur
+const route = useRoute()
 
 // --- État Local ---
 const searchPatient = ref('')
@@ -175,21 +173,12 @@ const newLine = ref({
 })
 
 // --- Computed ---
-
-// 🚨 NOUVEAU: Récupérer l'ID du docteur directement depuis les paramètres de l'URL
 const doctorIdFromRoute = computed(() => {
-    // La route est /doctor/prescriptions/26. Le paramètre est généralement nommé 'id' ou 'doctorId'.
-    // Je suppose 'id' pour la route '/doctor/prescriptions/:id'
     const id = route.params.id || route.params.doctorId; 
-    
-    // Vérification et conversion en nombre
     const doctorId = id ? parseInt(id) : null;
-    
-    // Log pour vérification dans la console du navigateur
     console.log(`[ROUTE LOG] Doctor ID lu depuis l'URL: ${doctorId}`);
     return doctorId;
 });
-
 
 const rawPatients = computed(() => {
     let patientsSource = patientStore.patients;
@@ -228,9 +217,7 @@ const selectedPatient = computed(() => {
 
 const patientPrescriptions = computed(() => prescriptionStore.prescriptions)
 
-
 // --- Méthodes de Gestion de Lignes Locales ---
-
 function fetchPatientHistory() {
     prescriptionLines.value = [];
     finalNotes.value = '';
@@ -240,7 +227,6 @@ function fetchPatientHistory() {
         prescriptionStore.fetchPatientPrescriptions(selectedPatientId.value)
     }
 }
-
 
 function addLocalLine() {
     const isMedicationValid = !!newLine.value.medicationName && newLine.value.medicationName.trim() !== '';
@@ -271,7 +257,6 @@ function removeLocalLine(index) {
 }
 
 // --- Méthode Principale : Création et Envoi Final ---
-
 async function createOrdonnanceAndFinalize() {
     // 1. Validation de base
     if (!selectedPatientId.value) {
@@ -283,7 +268,7 @@ async function createOrdonnanceAndFinalize() {
         return
     }
     
-    // 🚨 UTILISATION DIRECTE DE L'ID DU DOCTEUR DEPUIS L'URL
+    // 🚨 CORRECTION : Utilisation de l'ID du docteur depuis l'URL
     const currentDoctorId = doctorIdFromRoute.value;
 
     if (!currentDoctorId) {
@@ -292,11 +277,9 @@ async function createOrdonnanceAndFinalize() {
         return; 
     }
     
-    // 🚨 LOG AFFICHANT L'ID ENVOYÉ - POUR CONFIRMATION
     console.log(`📋 Envoi de la prescription: doctor_id (depuis l'URL) utilisé est -> ${currentDoctorId}`);
 
-
-    // 2. Construction du Payload
+    // 2. Construction du Payload - CORRECTION : 'prescription_lines' au lieu de 'lines'
     const payloadLines = prescriptionLines.value.map(line => ({
         medication_name: line.medicationName, 
         dosage: line.dosage,
@@ -306,17 +289,17 @@ async function createOrdonnanceAndFinalize() {
     }));
 
     const prescriptionData = { 
-        lines: payloadLines, 
+        prescription_lines: payloadLines, // 🚨 CORRIGÉ : 'prescription_lines' au lieu de 'lines'
         notes: finalNotes.value,
-        // doctor_id N'EST PAS inclus ici, car il est passé comme argument séparé au store.
     }
     
-    // 3. Appel au Store (API POST) :
-    // 🚨 MODIFICATION ICI : Passez currentDoctorId comme premier argument à createPrescription
+    console.log('📦 Données envoyées:', prescriptionData);
+    
+    // 3. Appel au Store
     const responseData = await prescriptionStore.createPrescription(currentDoctorId, selectedPatientId.value, prescriptionData)
     
     // 4. Traitement après succès/échec
-    if (responseData && responseData.success) { // Vérifier responseData.success
+    if (responseData && responseData.success) {
         prescriptionLines.value = []
         finalNotes.value = ''
         prescriptionStore.setSuccess("L'ordonnance a été enregistrée avec succès. Le brouillon est réinitialisé.");
@@ -324,9 +307,7 @@ async function createOrdonnanceAndFinalize() {
     }
 }
 
-
 // --- Utilitaires ---
-
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -339,44 +320,12 @@ const getStatusClass = (status) => {
     return 'status-default';
 }
 
-// initializeAndLogUser n'est plus appelée au montage, car l'ID du docteur vient de l'URL.
-// Je la laisse commentée ici au cas où tu voudrais la réactiver pour d'autres besoins de log/debug.
-/*
-async function initializeAndLogUser() {
-    const user = authStore.user;
-    console.log("-----------------------------------------");
-    console.log("1. 🔑 Données de l'utilisateur connecté (AuthStore) : 🔑");
-    if (user) {
-        console.log(user);
-        try {
-            console.log(`\n2. 🧑‍⚕️ Tentative de récupération du profil Médecin pour user_id: ${user.id}...`);
-            const doctorId = await userStore.fetchDoctorByUserId(user.id); 
-            const doctorProfile = userStore.getCurrentDoctorProfile;
-            console.log("3. ✅ Profil Médecin Récupéré (UserStore):");
-            console.log(doctorProfile); 
-            console.log(`   --> doctor_id (clé métier) : ${doctorId}`);
-            console.log("-----------------------------------------");
-        } catch (error) {
-            console.error("3. ❌ ERREUR: Échec de la récupération du profil Médecin.");
-            console.error("Détail de l'erreur (UserStore):", userStore.error || error.message);
-            console.log("-----------------------------------------");
-        }
-        
-    } else {
-        console.log("Utilisateur non connecté ou données non chargées dans authStore.");
-        console.log("-----------------------------------------");
-    }
-}
-*/
-
 onMounted(() => {
-    // initializeAndLogUser(); // Désactivé par défaut. Activez si vous avez besoin des logs du userStore au montage.
     patientStore.allPatient();
 })
 </script>
 
 <style scoped>
-/* (Styles inchangés) */
 .ordonnances-page { padding: 32px; background-color: #f8f9fa; }
 .title { font-size: 28px; color: #002580; margin-bottom: 24px; }
 .section { margin-top: 28px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }

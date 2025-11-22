@@ -74,21 +74,10 @@ onMounted(() => {
 
 // Propriétés calculées pour les nombres totaux
 const totalPatients = computed(() => {
-  // DEBUG : Log pour voir la structure exacte
-  // console.log("Statistiques de Bamako - Computed totalPatients: patientStore.patients ->", patientStore.patients);
-
-  // ✅ CORRECTION ICI : Accédez à `patientStore.patients.data`
-  // S'assure que patientStore.patients existe, que patientStore.patients.data existe et est un tableau.
+  // Accès aux patients : Suppose que patientStore.patients est un objet paginé { data: [...] }
   const count = patientStore.patients && patientStore.patients.data && Array.isArray(patientStore.patients.data)
                 ? patientStore.patients.data.length
                 : 0;
-  
-  // Ou, si vous voulez le nombre TOTAL de patients (toutes pages confondues) de la pagination Laravel:
-  // const count = patientStore.patients && patientStore.patients.total
-  //               ? patientStore.patients.total
-  //               : 0;
-
-  // console.log(`Statistiques de Bamako - Computed totalPatients: Count résultant -> ${count}`);
   return count;
 });
 
@@ -102,10 +91,13 @@ watch(() => patientStore.patients, (newValue, oldValue) => {
   }
 }, { immediate: true });
 
+
 const totalDoctors = computed(() => doctorStore.doctors ? doctorStore.doctors.length : 0);
 const totalNurses = computed(() => nurseStore.nurses ? nurseStore.nurses.length : 0);
 const totalTechnicians = computed(() => labTechnicianStore.labTechnicians ? labTechnicianStore.labTechnicians.length : 0);
-const totalUrgentists = computed(() => urgentistStore.urgentists ? urgentistStore.urgentists.length : 0);
+
+// ✅ CORRECTION CRITIQUE : Utilisation de l'état "allUrgentists" qui est le nom réel dans le store.
+const totalUrgentists = computed(() => urgentistStore.allUrgentists ? urgentistStore.allUrgentists.length : 0);
 
 
 // Données pour le graphique basées sur les statistiques globales
@@ -117,8 +109,6 @@ const chartData = computed(() => {
     { label: 'Techniciens', value: totalTechnicians.value },
     { label: 'Urgentistes', value: totalUrgentists.value },
   ];
-
-  // console.log("Statistiques de Bamako: chartData computed re-evaluated. Data for chart:", globalStatsForChart);
 
   return {
     labels: globalStatsForChart.map(s => s.label),

@@ -12,20 +12,31 @@
           <option value="inactive">Inactif</option>
         </select>
 
-        <label for="doctor-select">Médecin responsable :</label>
-
-        <select id="doctor-select" v-model="form.doctor_id">
-          <option :value="null" disabled>Sélectionner un médecin</option>
+        <label for="user-search">Rechercher un responsable :</label>
+        <input 
+          id="user-search" 
+          v-model="searchQuery" 
+          placeholder="Entrez le nom ou prénom de l'utilisateur..." 
+        />
+        
+        <label for="user-select">Responsable sélectionné :</label>
+        <select 
+          id="user-select" 
+          v-model="form.responsible_user_id"
+        >
+          <option :value="null">Sélectionner un responsable</option>
           <option
-            v-for="doctor in doctorStore.doctors"
-            :key="doctor.id"
-            :value="doctor.id"
+            v-for="user in filteredResponsibleUsers" 
+            :key="user.id"
+            :value="user.id"
           >
-            {{ doctor.user.first_name }} {{ doctor.user.last_name }} ({{ doctor.speciality }})
+            {{ user.first_name }} {{ user.last_name }} ({{ user.role }})
           </option>
         </select>
 
-        <button class="submit">Ajouter</button>
+        <button class="submit" :disabled="userStore.loading">
+          {{ userStore.loading ? 'Chargement...' : 'Ajouter' }}
+        </button>
       </form>
     </div>
   </AdminLayout>
@@ -33,62 +44,73 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, ref, computed } from 'vue' 
 import { useRouter } from 'vue-router'
 import { useDepartmentStore } from '@/stores/departmentStore'
-import { useDoctorStore } from '@/stores/doctorStore'
+
+import { useUserStore } from '@/stores/userStore' 
 
 const router = useRouter()
 const departmentStore = useDepartmentStore()
-const doctorStore = useDoctorStore()
+const userStore = useUserStore() 
+
+const searchQuery = ref('') 
 
 const form = reactive({
   name: '',
   description: '',
   position: '',
   status: 'active',
-  doctor_id: null
+  responsible_user_id: null 
 })
 
+// Propriété calculée pour filtrer la liste des utilisateurs affichés
+const filteredResponsibleUsers = computed(() => {
+  if (!userStore.responsibleUsers) {
+    return []
+  }
+  
+  if (!searchQuery.value) {
+    return userStore.responsibleUsers
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return userStore.responsibleUsers.filter(user => {
+    // Vérifier si user existe avant d'accéder aux propriétés
+    if (!user || !user.first_name || !user.last_name) return false;
+    
+    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase()
+    return fullName.includes(query)
+  })
+})
+
+
 onMounted(async () => {
-  await doctorStore.fetchAllDoctors();
-  // Optionnel : si doctorStore.doctors peut être paginé, assurez-vous de prendre la bonne propriété
-  // console.log("Docteurs chargés:", doctorStore.doctors.data || doctorStore.doctors);
+  // Cette ligne est correcte, mais dépend de la résolution du bug 500 dans l'API backend.
+  await userStore.fetchResponsibleUsers(); 
 });
 
 const submit = async () => {
+  if (userStore.loading) return; 
+  
   try {
-    // --- ✅ AJOUT DU LOG DE DÉBOGAGE ICI ---
-    console.log("Données envoyées au backend:", form);
-    // ------------------------------------
-
-    // Vérifier si la liste des docteurs est paginée
-    const doctorsData = doctorStore.doctors.data || doctorStore.doctors;
-
-    // S'assurer que le doctor_id est valide s'il est fourni
-    if (form.doctor_id !== null) {
-        const selectedDoctor = doctorsData.find(d => d.id === form.doctor_id);
-        if (!selectedDoctor) {
-            // Cette erreur indique que l'ID sélectionné n'est pas dans la liste chargée.
-            // Cela pourrait arriver si la liste est vide, ou si l'ID est invalide.
-            throw new Error('Médecin sélectionné introuvable dans la liste chargée.');
-        }
-    }
-
+    console.log("Données envoyées au backend (responsible_user_id):", form);
+    
     await departmentStore.createDepartment(form)
+    
     alert('Département créé avec succès !')
-    router.push({ name: 'Departments' }) // Assurez-vous que le nom de la route est 'Departments' ou 'Departements'
+    router.push({ name: 'Department' }) 
   } catch (error) {
-    console.error("Erreur détaillée lors de la création du département:", error); // Log détaillé de l'erreur
+    console.error("Erreur détaillée lors de la création du département:", error);
     alert('Échec de la création du département : ' + (error.response?.data?.message || error.message));
   }
 }
 </script>
 
 <style scoped>
-@import './FormStyle.css';
+/* Votre style CSS */
+@import './FormStyle.css'; 
 
-/* Vos styles CSS existants */
 .form-container {
   max-width: 600px;
   margin: auto;
@@ -130,7 +152,12 @@ select {
   font-weight: bold;
 }
 
-.submit:hover {
+.submit:disabled {
+    background-color: #a0c3e8;
+    cursor: not-allowed;
+}
+
+.submit:hover:not(:disabled) {
   background-color: #0056b3;
 }
 

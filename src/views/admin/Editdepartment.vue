@@ -12,16 +12,16 @@
           <option value="inactive">Inactif</option>
         </select>
 
-        <label for="doctor-select">Médecin responsable :</label>
+        <label for="user-select">Responsable du département :</label>
 
-        <select id="doctor-select" v-model="form.doctor_id">
-          <option :value="null" disabled>Sélectionner un médecin</option>
+        <select id="user-select" v-model="form.responsible_user_id">
+          <option :value="null">Sélectionner un responsable</option>
           <option
-            v-for="doctor in doctorStore.doctors"
-            :key="doctor.id"
-            :value="doctor.id"
+            v-for="user in userStore.responsibleUsers"
+            :key="user.id"
+            :value="user.id"
           >
-            {{ doctor.user.first_name }} {{ doctor.user.last_name }} ({{ doctor.speciality }})
+            {{ user.first_name }} {{ user.last_name }} ({{ user.role }})
           </option>
         </select>
 
@@ -35,34 +35,36 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { reactive, onMounted, ref } from 'vue' // ✅ Import 'ref' pour loading/error
-import { useRouter, useRoute } from 'vue-router' // ✅ Import 'useRoute' pour l'ID
+import { reactive, onMounted, ref } from 'vue' 
+import { useRouter, useRoute } from 'vue-router'
 import { useDepartmentStore } from '@/stores/departmentStore'
-import { useDoctorStore } from '@/stores/doctorStore'
+
+// ✅ CORRECTION : Importation du VRAI store utilisateur
+import { useUserStore } from '@/stores/userStore' 
 
 const router = useRouter()
-const route = useRoute() // ✅ Permet d'accéder aux paramètres de la route (ici, l'ID du département)
+const route = useRoute() 
 const departmentStore = useDepartmentStore()
-const doctorStore = useDoctorStore()
+const userStore = useUserStore() // Initialisation du store utilisateur
 
-const loading = ref(true) // ✅ État de chargement
-const error = ref(null)   // ✅ État d'erreur
+const loading = ref(true) 
+const error = ref(null) 
 
-// Le formulaire réactif pour stocker les données du département à éditer
 const form = reactive({
   name: '',
   description: '',
   position: '',
-  status: 'active', // ✅ 'active' par défaut, sera écrasé par les données chargées
-  doctor_id: null
+  status: 'active',
+  // Clé attendue par le Request Laravel
+  responsible_user_id: null 
 })
 
 onMounted(async () => {
-  const departmentId = route.params.id // Récupérer l'ID du département depuis l'URL
+  const departmentId = route.params.id
 
   try {
-    // 1. Charger la liste des docteurs d'abord
-    await doctorStore.fetchAllDoctors()
+    // 1. Charger la liste des utilisateurs
+    await userStore.fetchResponsibleUsers()
 
     // 2. Charger les détails du département spécifique
     const department = await departmentStore.fetchDepartmentById(departmentId)
@@ -73,7 +75,9 @@ onMounted(async () => {
       form.description = department.description
       form.position = department.position
       form.status = department.status
-      form.doctor_id = department.doctor_id || null // Pré-sélectionner le docteur, ou null
+      
+      // Pré-sélectionner l'ID de l'utilisateur (user_id)
+      form.responsible_user_id = department.user_id || null 
     } else {
       error.value = 'Département non trouvé.'
     }
@@ -88,16 +92,14 @@ onMounted(async () => {
 const submit = async () => {
   const departmentId = route.params.id
 
-  // --- Optionnel : Log pour vérifier les données envoyées ---
-  console.log("Données envoyées pour mise à jour:", form);
-  // -------------------------------------------------------
+  console.log("Données envoyées pour mise à jour (responsible_user_id):", form);
 
   try {
-    await departmentStore.updateDepartment(departmentId, form) // ✅ Nouvelle méthode updateDepartment
+    await departmentStore.updateDepartment(departmentId, form) 
+    
     alert('Département mis à jour avec succès !')
-    router.push({ name: 'Department' }) // Rediriger après succès
+    router.push({ name: 'Department' }) 
   } catch (err) {
-    // Améliorer la gestion des erreurs pour afficher les messages du backend
     error.value = 'Échec de la mise à jour du département : ' + (err.response?.data?.message || err.message)
     console.error('Erreur de mise à jour:', err.response?.data || err)
     alert(error.value)
@@ -108,7 +110,6 @@ const submit = async () => {
 <style scoped>
 @import './FormStyle.css';
 
-/* Styles spécifiques au formulaire (identiques à AjouterDepartement.vue) */
 .form-container {
   max-width: 600px;
   margin: auto;

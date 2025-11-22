@@ -81,7 +81,9 @@
         <div class="chat-box">
           <p v-if="chatStore.error" class="error-text chat-error-display">{{ chatStore.error }}</p>
 
-          <div v-if="chatStore.loading" class="chat-loading">Chargement des messages...</div>
+          <div v-if="chatStore.loading || isConversationInitializationPending" class="chat-loading">
+            {{ isConversationInitializationPending ? 'Initialisation de la conversation...' : 'Chargement des messages...' }}
+          </div>
 
           <div v-else-if="!chatStore.currentConversation?.id && !chatStore.selectedRecipient?.id" class="chat-placeholder">
             Sélectionnez une personne pour commencer à chatter.
@@ -112,11 +114,11 @@
                 type="text"
                 placeholder="Écrire un message..."
                 required
-                :disabled="chatStore.loading"
+                :disabled="isInputDisabled"
               />
               <button
                 type="submit"
-                :disabled="chatStore.sending"
+                :disabled="isInputDisabled || chatStore.sending"
               >
                 <span v-if="chatStore.sending">Envoi...</span>
                 <span v-else>Envoyer</span>
@@ -135,13 +137,11 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chatStore'
 import { useAuthStore } from '@/stores/authStores'
-import { usePatientStore } from '@/stores/patientStore'
 import { useUserStore } from '@/stores/userStore'
 
 const route = useRoute()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
-const patientStore = usePatientStore()
 const userStore = useUserStore()
 
 const messageInput = ref('')
@@ -149,6 +149,10 @@ const chatThreadRef = ref(null)
 const activeTab = ref('conversations')
 const searchQuery = ref('')
 
+// État pour gérer la transition de sélection d'utilisateur à l'initialisation de conversation
+const isConversationInitializationPending = ref(false);
+
+// Calcule l'ID de l'utilisateur courant (le docteur)
 const currentDoctorIdComputed = computed(() => {
     if (route.params.id) {
         return Number(route.params.id);
@@ -158,6 +162,13 @@ const currentDoctorIdComputed = computed(() => {
     }
     return null;
 });
+
+// Détermine si le champ de saisie doit être désactivé
+const isInputDisabled = computed(() => {
+    // Si chargement, envoi, ou si nous attendons l'ID de conversation
+    return chatStore.loading || chatStore.sending || isConversationInitializationPending.value;
+});
+
 
 const loadAllUsersToChat = async () => {
     if (currentDoctorIdComputed.value === null || isNaN(currentDoctorIdComputed.value)) {
@@ -175,6 +186,7 @@ const loadAllUsersToChat = async () => {
 
 const filteredUsersForChat = computed(() => {
     const allUsers = Array.isArray(userStore.allUsers) ? userStore.allUsers : [];
+    // Filtre les utilisateurs pour ne pas inclure l'utilisateur courant
     let users = allUsers.filter(user => user.id !== currentDoctorIdComputed.value);
 
     if (searchQuery.value) {
@@ -198,14 +210,20 @@ const getRecipientFromConv = (conv) => {
     return recipient || { id: -1, first_name: 'Inconnu', last_name: '' };
 };
 
+/**
+ * Normalise l'URL de la photo de profil.
+ */
 const getUserPhoto = (user) => {
     if (user?.profile_photo_url) {
         return user.profile_photo_url;
     }
     if (user?.profile_photo_path) {
         const cleanedPath = user.profile_photo_path.startsWith('public/') ? user.profile_photo_path.substring(7) : user.profile_photo_path;
-        return `http://localhost:8000/storage/${cleanedPath}`;
+        // CORRECTION CLÉ : Utiliser un chemin relatif /storage/ pour éviter l'erreur ERR_NAME_NOT_RESOLVED
+        // Si cela ne fonctionne pas, remplacez '/storage/' par l'URL complète de votre API, par exemple 'https://api.monsite.com/storage/'
+        return `/storage/${cleanedPath}`; 
     }
+    // Placeholder basé sur le nom
     return `https://via.placeholder.com/40/002580/ffffff?text=${user?.first_name ? user.first_name.charAt(0) : 'U'}`;
 };
 
@@ -220,58 +238,59 @@ const startChatWithUser = async (user) => {
         chatStore.error = "Erreur: ID du docteur non trouvé ou non valide pour démarrer un chat.";
         return;
     }
-
+    
+    // 1. Indiquer que l'initialisation de la conversation est en cours
+    isConversationInitializationPending.value = true;
+    
     console.log(`DOCTOR CHAT: Démarrage/récupération du chat avec l'utilisateur ${user.id} (${user.first_name}).`);
     await chatStore.startChatWithUser(user);
-
-    console.log("DOCTOR CHAT: État du store après startChatWithUser:", {
-        currentConversation: chatStore.currentConversation,
-        selectedRecipient: chatStore.selectedRecipient,
-        messages: chatStore.messages
-    });
-
+    
+    // 2. Le chat a démarré, basculer sur la vue de la conversation et arrêter l'indicateur
     activeTab.value = 'conversations';
     searchQuery.value = '';
+    isConversationInitializationPending.value = false;
+
     await nextTick(() => scrollToBottom());
 };
 
 const scrollToBottom = () => {
-  nextTick(() => {
-    const thread = chatThreadRef.value;
-    if (thread) {
-      thread.scrollTop = 0;
-    }
-  });
+    nextTick(() => {
+        const thread = chatThreadRef.value;
+        if (thread) {
+            // Pour un conteneur en 'flex-direction: column-reverse', le défilement est à 0.
+            thread.scrollTop = 0;
+        }
+    });
 };
 
 const handleSendMessage = async () => {
-  // La logique pour empêcher l'envoi de messages vides EST CONSERVÉE.
-  // Le bouton est toujours visible, mais on ne traite l'envoi que si l'input n'est pas vide.
-  if (!messageInput.value.trim()) {
-    chatStore.error = "Veuillez taper un message avant d'envoyer.";
-    console.warn("Tente d'envoyer un message vide.");
-    return;
-  }
+    const content = messageInput.value.trim();
 
-  // Cette condition est également conservée pour assurer qu'un destinataire est sélectionné.
-  // Le bouton est visible, mais le message ne sera pas envoyé si personne n'est sélectionné.
-  if (!chatStore.currentConversation?.id && !chatStore.selectedRecipient?.id) {
-    chatStore.error = "Veuillez sélectionner une personne pour envoyer un message.";
-    console.error("Tentative d'envoi de message sans conversation active ni destinataire sélectionné.");
-    return;
-  }
+    if (!content) {
+        chatStore.error = "Veuillez taper un message avant d'envoyer.";
+        return;
+    }
 
-  const content = messageInput.value.trim();
-  const originalMessage = content;
-  messageInput.value = '';
+    // Le store gère l'envoi, nous devons juste nous assurer qu'on ne l'appelle pas si nous sommes en attente d'initialisation
+    if (isInputDisabled.value) {
+        chatStore.error = "Veuillez patienter pendant l'initialisation de la conversation ou assurez-vous qu'un destinataire est sélectionné.";
+        return;
+    }
 
-  const success = await chatStore.sendMessage(content);
-  if (success) {
-    console.log("Message envoyé avec succès.");
-  } else {
-    console.error("Échec de l'envoi du message. Vérifier le chatStore.error pour plus de détails.");
-    messageInput.value = originalMessage;
-  }
+    const originalMessage = content;
+    messageInput.value = '';
+
+    // L'échec ici est probablement dû à l'absence de chat ID dans le store
+    const success = await chatStore.sendMessage(content);
+    
+    if (!success) {
+        console.error("Échec de l'envoi du message. Rétablissement de l'input.");
+        // Si le store n'a pas mis à jour son message d'erreur, nous le faisons ici pour l'utilisateur.
+        if (!chatStore.error) {
+            chatStore.error = "Échec de l'envoi. Le serveur a refusé le message. Vérifiez la connexion et le destinataire.";
+        }
+        messageInput.value = originalMessage; 
+    }
 };
 
 const formatTime = (isoString) => {
@@ -281,17 +300,22 @@ const formatTime = (isoString) => {
 
 
 onMounted(() => {
-  watch(() => authStore.user?.id, (newId) => {
-      if (newId && chatStore.getConversations.length === 0 && !chatStore.loadingConversations) {
-          chatStore.fetchConversations();
-      }
-  }, { immediate: true });
+    // 1. Initialiser les conversations dès que l'ID utilisateur est prêt
+    watch(() => authStore.user?.id, (newId) => {
+        if (newId && chatStore.conversations.length === 0 && !chatStore.loadingConversations) {
+            chatStore.fetchConversations();
+        }
+    }, { immediate: true });
 
-  if (route.query.conversation_id) {
-    chatStore.startChatWithConversation(Number(route.query.conversation_id));
-  }
+    // 2. Gérer la navigation directe vers une conversation spécifique (via query param)
+    if (route.query.conversation_id) {
+        setTimeout(() => {
+            chatStore.startChatWithConversation(Number(route.query.conversation_id));
+        }, 100); 
+    }
 });
 
+// Watcher pour le défilement lorsque de nouveaux messages arrivent
 watch(
     () => chatStore.messages.length,
     (newLength, oldLength) => {
@@ -301,6 +325,7 @@ watch(
     }
 );
 
+// Watcher pour réinitialiser l'état lors du changement de conversation (onglet Chats)
 watch(
     () => chatStore.currentConversation?.id,
     (newValue, oldValue) => {
@@ -308,10 +333,12 @@ watch(
             scrollToBottom();
             messageInput.value = '';
             chatStore.error = null;
+            isConversationInitializationPending.value = false; // Important
         }
     }
 );
 
+// Watcher pour réinitialiser l'état lors de la sélection d'un nouveau destinataire (onglet Utilisateurs)
 watch(
     () => chatStore.selectedRecipient?.id,
     (newValue, oldValue) => {
@@ -323,18 +350,26 @@ watch(
 );
 
 
+// Watcher pour gérer les actions lors du changement d'onglet
 watch(activeTab, (newTab) => {
-    if (newTab === 'users' && currentDoctorIdComputed.value) {
-        loadAllUsersToChat();
-        chatStore.currentConversation = null;
+    if (newTab === 'users') {
+        if (currentDoctorIdComputed.value) {
+            loadAllUsersToChat();
+        }
+        // Ne pas effacer le chat courant ici pour permettre la bascule si l'utilisateur change d'avis
         chatStore.messages = [];
         messageInput.value = '';
     } else if (newTab === 'conversations') {
-        chatStore.selectedRecipient = null;
+        // Dans l'onglet conversations, on ne garde pas de destinataire sélectionné sans conversation active
+        if (!chatStore.currentConversation?.id) {
+             chatStore.selectedRecipient = null;
+        }
     }
     chatStore.error = null;
+    isConversationInitializationPending.value = false;
 });
 
+// Watcher initial pour s'assurer de charger les utilisateurs
 watch(currentDoctorIdComputed, (newId) => {
     if (newId !== null && !isNaN(newId) && activeTab.value === 'users') {
         loadAllUsersToChat();
@@ -342,8 +377,9 @@ watch(currentDoctorIdComputed, (newId) => {
 }, { immediate: true });
 </script>
 
-<style scoped>
-/* COULEURS DU THÈME DOCTEUR */
+<!-- BLOC STYLE GLOBAL POUR LES VARIABLES CSS (Non scopé) -->
+<style>
+/* COULEURS DU THÈME DOCTEUR DÉFINIES GLOBALEMENT POUR ÉVITER LES ERREURS DE SCOPE */
 :root {
     --primary-doctor-blue: #002580; /* Bleu profond principal */
     --accent-doctor-blue: #0040d0; /* Bleu plus clair pour les accents */
@@ -360,19 +396,22 @@ watch(currentDoctorIdComputed, (newId) => {
     --contact-active-bg: #ccd8ff; /* Contact actif dans l'onglet patients */
     --send-button-disabled-bg: #cccccc; /* Couleur pour le bouton désactivé */
 }
+</style>
 
+<!-- BLOC STYLE SCOPÉ (Contient toutes les règles du composant) -->
+<style scoped>
 /* Conteneur et titres */
 .messages-section {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
 }
 h1 {
-  font-size: 2.2em;
-  color: var(--primary-doctor-blue);
-  margin-bottom: 25px;
-  border-bottom: 2px solid var(--accent-doctor-blue);
-  padding-bottom: 10px;
+    font-size: 2.2em;
+    color: var(--primary-doctor-blue);
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--accent-doctor-blue);
+    padding-bottom: 10px;
 }
 
 .chat-container {
@@ -438,19 +477,19 @@ h1 {
 }
 
 .list-unstyled {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .list-unstyled li {
-  padding: 15px 20px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.2s;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
 }
 .list-unstyled li:hover {
-  background-color: var(--list-hover-bg);
+    background-color: var(--list-hover-bg);
 }
 
 /* Styles pour les éléments actifs et les rôles */
@@ -526,11 +565,11 @@ h1 {
 
 /* Zone de Chat */
 .chat-box {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--white);
-  position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--white);
+    position: relative;
 }
 
 .chat-error-display {
@@ -567,16 +606,16 @@ h1 {
 }
 
 .chat-thread {
-  flex-grow: 1;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column-reverse;
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
 }
 
 .message {
-  margin-top: 10px;
-  max-width: 70%;
+    margin-top: 10px;
+    max-width: 70%;
 }
 
 .message-bubble {
@@ -588,25 +627,25 @@ h1 {
 }
 
 .my-message {
-  align-self: flex-end;
-  align-items: flex-end;
-  margin-left: auto;
+    align-self: flex-end;
+    align-items: flex-end;
+    margin-left: auto;
 }
 .my-message .message-bubble {
-  background-color: var(--primary-doctor-blue);
-  color: white;
-  border-bottom-right-radius: 2px;
+    background-color: var(--primary-doctor-blue);
+    color: white;
+    border-bottom-right-radius: 2px;
 }
 
 .their-message {
-  align-self: flex-start;
-  align-items: flex-start;
-  margin-right: auto;
+    align-self: flex-start;
+    align-items: flex-start;
+    margin-right: auto;
 }
 .their-message .message-bubble {
-  background-color: var(--patient-bubble-bg);
-  color: var(--text-color);
-  border-bottom-left-radius: 2px;
+    background-color: var(--patient-bubble-bg);
+    color: var(--text-color);
+    border-bottom-left-radius: 2px;
 }
 
 .message-time {
@@ -623,21 +662,21 @@ h1 {
 
 /* Formulaire d'envoi */
 .message-input-form {
-  display: flex;
-  padding: 15px 20px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--light-bg);
-  align-items: center; /* Centrer verticalement les éléments */
-  gap: 10px; /* Espace entre input et bouton */
+    display: flex;
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--light-bg);
+    align-items: center; /* Centrer verticalement les éléments */
+    gap: 10px; /* Espace entre input et bouton */
 }
 
 .message-input-form input {
-  flex-grow: 1;
-  padding: 12px;
-  margin: 0; /* Supprime le margin-right: 10px; du patient */
-  border-radius: 20px;
-  border: 1px solid #ccc;
-  font-size: 1em;
+    flex-grow: 1;
+    padding: 12px;
+    margin: 0;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    font-size: 1em;
 }
 .message-input-form input:focus {
     border-color: var(--accent-doctor-blue);
@@ -646,15 +685,15 @@ h1 {
 }
 
 .message-input-form button {
-  flex-shrink: 0; /* Empêche le bouton de rétrécir */
-  padding: 12px 25px;
-  background-color: var(--primary-doctor-blue); /* Couleur active par défaut */
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    flex-shrink: 0; /* Empêche le bouton de rétrécir */
+    padding: 12px 25px;
+    background-color: var(--primary-doctor-blue); /* Couleur active par défaut */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 .message-input-form button:hover:not(:disabled) {
     background-color: var(--accent-doctor-blue); /* Couleur au survol */
@@ -662,7 +701,7 @@ h1 {
 .message-input-form button:disabled {
     background-color: var(--send-button-disabled-bg); /* Couleur quand désactivé */
     cursor: not-allowed;
-    opacity: 0.7; /* Légère opacité comme le patient */
+    opacity: 0.7;
 }
 
 /* États de chargement/erreur */
@@ -680,6 +719,7 @@ h1 {
     font-size: 1.1em;
 }
 .chat-loading {
+    /* Style du chat-loading si vous le rendez statique ou absolu */
     position: absolute;
     top: 0;
     left: 0;

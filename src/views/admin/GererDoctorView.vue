@@ -6,14 +6,19 @@
         <button class="btn-add" @click="openAddForm">➕ Ajouter un médecin</button>
       </div>
 
-      <div v-if="doctorStore.loading">
-        Chargement des médecins...
+      <div v-if="doctorStore.loading" class="loading-message">
+        <i class="fas fa-spinner fa-spin"></i> Chargement des médecins...
       </div>
-      <div v-if="doctorStore.error" class="error-message">
-        {{ doctorStore.error }}
+      
+      <div v-else-if="doctorStore.error" class="error-message">
+        Erreur de chargement: **{{ doctorStore.error }}**
+      </div>
+      
+      <div v-else-if="!doctorsList.length" class="no-data-message">
+        Aucun médecin trouvé.
       </div>
 
-      <div class="table-container" v-if="doctorsList.length">
+      <div class="table-container" v-else>
         <table class="doctor-table">
           <thead>
             <tr>
@@ -40,7 +45,7 @@
               </td>
               <td>
                 <RouterLink :to="{ name: 'EditDoctor', params: { id: doctor.id } }" class="btn-edit">
-                   ✏️
+                    ✏️
                 </RouterLink>
                 <button class="btn-delete" @click="confirmDelete(doctor.id)">🗑</button>
               </td>
@@ -48,7 +53,7 @@
           </tbody>
         </table>
 
-        <div class="pagination" v-if="paginationMeta.total > 0">
+        <div class="pagination" v-if="paginationMeta.total > 0 && doctorsList.length > 0">
           Page {{ paginationMeta.current_page }} / {{ paginationMeta.last_page }}
           ({{ paginationMeta.total }} médecins)
         </div>
@@ -58,7 +63,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue'; // 💡 Ajouter 'computed'
+import { onMounted, computed } from 'vue'; 
 import { useRouter, RouterLink } from 'vue-router'
 import { useDoctorStore } from '@/stores/doctorStore'
 import AdminLayout from '@/layouts/AdminLayout.vue'
@@ -67,18 +72,16 @@ const doctorStore = useDoctorStore();
 const router = useRouter()
 
 // =========================================================================
-// 💡 NOUVELLE LOGIQUE POUR L'ADAPTATION DE LA VUE
+// LOGIQUE POUR L'ADAPTATION DE LA VUE AU STORE DOCTOR
 // =========================================================================
 
-// Crée une liste sécurisée pour itérer (les données des docteurs)
+// Crée une liste sécurisée pour itérer (s'adapte au format tableau ou objet de pagination)
 const doctorsList = computed(() => {
-    // Si doctorStore.doctors est le tableau [] (état initial), ou si c'est l'objet de pagination,
-    // on vérifie si la propriété 'data' existe et est un tableau.
-    // Si doctorStore.doctors est l'objet de pagination, il renverra le tableau de docteurs.
-    // Sinon, il renverra un tableau vide [] (l'état initial).
+    // Si la propriété 'data' existe et est un tableau, on la retourne (cas pagination)
     if (doctorStore.doctors && Array.isArray(doctorStore.doctors.data)) {
         return doctorStore.doctors.data
     }
+    // Sinon, on s'attend à ce que 'doctorsStore.doctors' soit le tableau lui-même (cas simple)
     return Array.isArray(doctorStore.doctors) ? doctorStore.doctors : []
 })
 
@@ -86,14 +89,14 @@ const doctorsList = computed(() => {
 const paginationMeta = computed(() => {
     // Fournit les valeurs de pagination ou des valeurs par défaut sécurisées
     return {
-        current_page: doctorStore.doctors.current_page || 0,
-        last_page: doctorStore.doctors.last_page || 0,
+        current_page: doctorStore.doctors.current_page || 1,
+        last_page: doctorStore.doctors.last_page || 1,
         total: doctorStore.doctors.total || 0,
     }
 })
 
 // =========================================================================
-// ⬆️ FIN DE LA LOGIQUE D'ADAPTATION
+// ACTIONS
 // =========================================================================
 
 const openAddForm = () => {
@@ -117,8 +120,13 @@ onMounted(() => {
 </script>
 
 
-
 <style scoped>
+/*
+ * ATTENTION : Les styles suivants ont été nettoyés pour éviter les 
+ * erreurs de compilation dues à des caractères invisibles ou à une syntaxe incorrecte.
+ * C'est cette partie qui causait l'erreur 500 (Internal Server Error).
+ */
+
 .doctor-management {
   padding: 32px;
 }
@@ -192,5 +200,26 @@ onMounted(() => {
   margin-top: 16px;
   font-size: 14px;
   color: #444;
+}
+
+/* Messages de feedback */
+.loading-message {
+    padding: 15px;
+    text-align: center;
+    color: #002580;
+}
+.error-message {
+    color: #cc0000;
+    background-color: #ffdddd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+.no-data-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
 }
 </style>

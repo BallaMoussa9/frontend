@@ -12,7 +12,7 @@
               :class="{ active: activeTab === 'conversations' }"
               @click="activeTab = 'conversations'"
             >
-              Chats ({{ chatStore.getConversations.length }})
+              Chats ({{ chatStore.conversations.length }})
             </button>
             <button
               :class="{ active: activeTab === 'contacts' }"
@@ -24,20 +24,20 @@
 
           <div v-if="activeTab === 'conversations'" class="contact-list-panel">
             <p v-if="chatStore.loadingConversations" class="info-text">Chargement des conversations...</p>
-            <p v-else-if="chatStore.getConversations.length === 0" class="info-text">
+            <p v-else-if="chatStore.conversations.length === 0" class="info-text">
               Aucune conversation existante.
             </p>
             <ul v-else class="list-unstyled">
               <li
-                v-for="conv in chatStore.getConversations"
+                v-for="conv in chatStore.conversations"
                 :key="conv.id"
                 :class="{ active: conv.id === chatStore.currentConversation?.id }"
-                @click="chatStore.startChatWithConversation(conv.id)"
+                @click="startChatFromConversation(conv)"
               >
                 <div class="contact-info">
                   <img :src="getRecipientPhoto(getRecipientFromConv(conv))" alt="Photo" class="profile-photo-small">
                   <span class="contact-name">
-                      {{ getRecipientFromConv(conv).first_name }} {{ getRecipientFromConv(conv).last_name }}
+                    {{ getRecipientFromConv(conv).first_name }} {{ getRecipientFromConv(conv).last_name }}
                   </span>
                 </div>
                 <div class="last-message">
@@ -62,7 +62,7 @@
                 v-for="user in filteredUsers"
                 :key="user.id"
                 :class="{ 'active-contact': user.id === chatStore.selectedRecipient?.id }"
-                @click="startChat(user)"
+                @click="startChatWithNewUser(user)"
               >
                 <div class="contact-info">
                   <img :src="getRecipientPhoto(user)" alt="Photo" class="profile-photo-small">
@@ -81,7 +81,9 @@
 
         <div class="chat-box">
           <div v-if="chatStore.loading" class="chat-loading">Chargement des messages...</div>
-
+          <div v-else-if="chatStore.error" class="chat-placeholder error-message">
+            Erreur: {{ chatStore.error }}
+          </div>
           <div v-else-if="!chatStore.currentConversation" class="chat-placeholder">
             Sélectionnez un contact pour commencer à chatter.
           </div>
@@ -94,7 +96,7 @@
 
             <div class="chat-thread" ref="chatThreadRef">
                 <div
-                v-for="msg in [...chatStore.messages].reverse()"
+                v-for="msg in chatStore.messages"
                 :key="msg.id"
                 :class="['message', { 'my-message': chatStore.isMyMessage(msg), 'their-message': !chatStore.isMyMessage(msg) }]"
               >
@@ -111,10 +113,10 @@
                 type="text"
                 placeholder="Écrire un message..."
                 required
-                :disabled="chatStore.loading"
+                :disabled="chatStore.loading || chatStore.sending"
               />
-              <button type="submit" :disabled="chatStore.loading || !messageInput.trim()">
-                <span v-if="chatStore.loading">Envoi...</span>
+              <button type="submit" :disabled="chatStore.loading || chatStore.sending || !messageInput.trim()">
+                <span v-if="chatStore.sending">Envoi...</span>
                 <span v-else>Envoyer</span>
               </button>
             </form>
@@ -174,13 +176,23 @@ const searchUsers = () => {
 
 // ------------------- Logique Chat -------------------
 
+// RESTAURÉE : Trouver le destinataire dans un objet de conversation
 const getRecipientFromConv = (conv) => {
     const currentUserId = authStore.user?.id;
+    // Tente de trouver l'utilisateur qui n'est pas l'utilisateur courant
     return conv.users.find(u => u.id !== currentUserId) || conv.users[0];
 }
 
-// ✅ Correction ici — on appelle la méthode existante du store
-const startChat = (user) => {
+// NOUVEAU : Lance le chat à partir d'une conversation existante
+const startChatFromConversation = (conv) => {
+    // Trouve l'objet utilisateur destinataire via la fonction restaurée
+    const recipient = getRecipientFromConv(conv);
+    chatStore.startChatWithUser(recipient); 
+    activeTab.value = 'conversations';
+};
+
+// Démarrer un nouveau chat à partir de la liste des contacts
+const startChatWithNewUser = (user) => {
     chatStore.startChatWithUser(user);
     activeTab.value = 'conversations';
     searchQuery.value = '';
@@ -193,7 +205,7 @@ const scrollToBottom = () => {
   nextTick(() => {
     const thread = chatThreadRef.value;
     if (thread) {
-      thread.scrollTop = thread.scrollHeight;
+      thread.scrollTop = thread.scrollHeight; 
     }
   });
 };
@@ -222,10 +234,11 @@ const getRecipientPhoto = (user) => {
     const photoPath = user?.profile_photo_path;
     if (photoPath) {
         const cleanedPath = photoPath.startsWith('public/') ? photoPath.substring(7) : photoPath;
-        return `baseURL: 'https://santeko-api.onrender.com/api/storage/${cleanedPath}`;
+        return `https://santeko-api.onrender.com/api/storage/${cleanedPath}`; 
     }
 
-    return 'https://via.placeholder.com/40/002580/ffffff?text=U';
+    const firstLetter = (user?.first_name ? user.first_name.charAt(0) : 'U').toUpperCase();
+    return `https://via.placeholder.com/40/002580/ffffff?text=${firstLetter}`;
 };
 
 
@@ -254,16 +267,16 @@ watch(
 <style scoped>
 /* Conteneur et titres */
 .messages-section {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
 }
 h1 {
-  font-size: 2.2em;
-  color: #002580;
-  margin-bottom: 25px;
-  border-bottom: 2px solid #0040d0;
-  padding-bottom: 10px;
+    font-size: 2.2em;
+    color: #002580;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #0040d0;
+    padding-bottom: 10px;
 }
 
 .chat-container {
@@ -329,30 +342,30 @@ h1 {
 }
 
 .list-unstyled {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .list-unstyled li {
-  padding: 15px 20px;
-  cursor: pointer;
-  border-bottom: 1px solid #e1e7f3;
-  transition: background-color 0.2s;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #e1e7f3;
+    transition: background-color 0.2s;
 }
 .list-unstyled li:hover {
-  background-color: #dbe4f2;
+    background-color: #dbe4f2;
 }
 
 /* Styles pour les éléments actifs et les rôles */
 .list-unstyled li.active,
 .active-contact {
-    background-color: #0040d0; /* Couleur pour les conversations actives */
+    background-color: #0040d0;
     color: white;
     font-weight: 500;
 }
 .active-contact {
-    background-color: #ccd8ff; /* Couleur différente pour l'onglet contacts */
+    background-color: #ccd8ff;
     color: #333;
     border-left: 4px solid #0040d0;
     padding-left: 16px !important;
@@ -374,6 +387,11 @@ h1 {
     padding-left: 50px;
     margin-top: 2px;
 }
+.list-unstyled li.active .user-role {
+    color: white;
+    opacity: 0.8;
+}
+
 
 .contact-info {
     display: flex;
@@ -385,6 +403,10 @@ h1 {
     color: #333;
     margin-left: 10px;
 }
+.list-unstyled li.active .contact-name {
+    color: white;
+}
+
 .last-message {
     font-size: 0.85em;
     color: #6c757d;
@@ -392,6 +414,9 @@ h1 {
     overflow: hidden;
     text-overflow: ellipsis;
     padding-left: 50px;
+}
+.list-unstyled li.active .last-message {
+    color: #e0e0e0;
 }
 .profile-photo-small {
     width: 40px;
@@ -404,11 +429,11 @@ h1 {
 
 /* Zone de Chat */
 .chat-box {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: #fff;
-  position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    position: relative;
 }
 
 .chat-header {
@@ -434,16 +459,16 @@ h1 {
 }
 
 .chat-thread {
-  flex-grow: 1;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .message {
-  margin-bottom: 10px;
-  max-width: 70%;
+    margin-bottom: 10px;
+    max-width: 70%;
 }
 
 .message-bubble {
@@ -455,25 +480,25 @@ h1 {
 }
 
 .my-message {
-  align-self: flex-end;
-  align-items: flex-end;
-  margin-left: auto;
+    align-self: flex-end;
+    align-items: flex-end;
+    margin-left: auto;
 }
 .my-message .message-bubble {
-  background-color: #0040d0;
-  color: white;
-  border-bottom-right-radius: 2px;
+    background-color: #0040d0;
+    color: white;
+    border-bottom-right-radius: 2px;
 }
 
 .their-message {
-  align-self: flex-start;
-  align-items: flex-start;
-  margin-right: auto;
+    align-self: flex-start;
+    align-items: flex-start;
+    margin-right: auto;
 }
 .their-message .message-bubble {
-  background-color: #f1f0f0;
-  color: #333;
-  border-bottom-left-radius: 2px;
+    background-color: #f1f0f0;
+    color: #333;
+    border-bottom-left-radius: 2px;
 }
 
 .message-time {
@@ -486,28 +511,28 @@ h1 {
 
 /* Formulaire d'envoi */
 .message-input-form {
-  display: flex;
-  padding: 15px 20px;
-  border-top: 1px solid #e0e0e0;
-  background-color: #fcfcfc;
+    display: flex;
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fcfcfc;
 }
 .message-input-form input {
-  flex-grow: 1;
-  padding: 12px;
-  margin: 0 10px 0 0;
-  border-radius: 20px;
-  border: 1px solid #ccc;
-  font-size: 1em;
+    flex-grow: 1;
+    padding: 12px;
+    margin: 0 10px 0 0;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    font-size: 1em;
 }
 .message-input-form button {
-  padding: 12px 25px;
-  background-color: #0040d0;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    padding: 12px 25px;
+    background-color: #0040d0;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 .message-input-form button:hover:not(:disabled) {
     background-color: #002580;
@@ -544,5 +569,11 @@ h1 {
     font-size: 1.2em;
     color: #0040d0;
     z-index: 10;
+}
+/* Style d'erreur spécifique pour le chat */
+.error-message {
+    color: #dc3545 !important; 
+    font-weight: bold;
+    font-style: normal;
 }
 </style>

@@ -1,17 +1,20 @@
-// src/stores/prescriptionStore.js
+// src/stores/prescriptionStore.js - VERSION CORRIGÉE
 
 import { defineStore } from 'pinia';
-import apiPrescription from '@/services/apiPrescription'; // Assurez-vous d'avoir ce service bien défini
-import { useAuthStore } from './authStores'; // Assurez-vous d'avoir un authStore pour le user/doctor ID
+import apiPrescription from '@/services/apiPrescription';
+import { useConsultationStore } from './consultationStore'; // 🔥 IMPORT AJOUTÉ
 
 export const usePrescriptionStore = defineStore('prescription', {
   state: () => ({
-    prescriptions: [], // Liste des prescriptions chargées
-    currentPrescription: null, // Prescription actuellement affichée/éditée
+    prescriptions: [],
+    currentPrescription: null,
     loading: false,
-    error: null, // Erreur générique
-    authError: null, // 🚨 NOUVEAU: Erreur spécifique pour l'autorisation (par exemple 403)
+    error: null,
+    authError: null,
     success: null,
+    // 🔥 AJOUT: Stocker les IDs pour faciliter les appels
+    currentDoctorId: null,
+    currentPatientId: null,
   }),
 
   getters: {
@@ -19,7 +22,7 @@ export const usePrescriptionStore = defineStore('prescription', {
     getCurrentPrescription: (state) => state.currentPrescription,
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
-    getAuthError: (state) => state.authError, // 🚨 NOUVEAU GETTER
+    getAuthError: (state) => state.authError,
     getSuccess: (state) => state.success,
   },
 
@@ -27,103 +30,161 @@ export const usePrescriptionStore = defineStore('prescription', {
     setLoading(value) {
       this.loading = value;
     },
+    
     setError(message) {
       this.error = message;
-      this.authError = null; // S'assurer que les autres erreurs réinitialisent l'erreur d'auth
+      this.authError = null;
       this.success = null;
     },
+    
     setSuccess(message) {
       this.success = message;
       this.error = null;
-      this.authError = null; // Réinitialiser l'erreur d'auth en cas de succès
+      this.authError = null;
     },
+    
     clearMessages() {
       this.error = null;
-      this.authError = null; // 🚨 NOUVEAU: Réinitialise aussi l'erreur d'autorisation
+      this.authError = null;
       this.success = null;
     },
 
+    // 🔥 NOUVELLE ACTION: Définir les IDs courants
+    setCurrentIds(doctorId, patientId) {
+      this.currentDoctorId = doctorId;
+      this.currentPatientId = patientId;
+    },
+
     /**
-     * Crée une nouvelle prescription.
-     * @param {number} patientId - L'ID du patient cible
+     * Crée une nouvelle prescription avec gestion automatique de la consultation
+     * @param {number} doctorId - L'ID du docteur
+     * @param {number} patientId - L'ID du patient  
      * @param {object} prescriptionData - Données de la prescription (inclut 'lines')
-     * @returns {Promise<boolean>} Indique si la création a réussi
+     * @returns {Promise<object>} Résultat de la création
      */
-    // Dans src/stores/prescriptionStore.js, à l'intérieur de 'actions: {'
+    async createPrescription(doctorId, patientId, prescriptionData) {
+  this.clearMessages();
+  this.setLoading(true);
+  
+  try {
+    console.log('🔄 Début création prescription...', { 
+      doctorId, 
+      patientId, 
+      prescriptionData 
+    });
 
-    async createPrescription(doctorId, patientId, prescriptionData) { // 🚨 doctorId est maintenant un argument
-      this.clearMessages();
-      this.setLoading(true);
-      // const authStore = useAuthStore(); // 🚨 PLUS BESOIN d'importer useAuthStore ici pour doctorId
-      // const doctorId = authStore.user?.doctor?.id; // 🚨 PLUS BESOIN de cette ligne
-
-      // Validation de sécurité : s'assurer que doctorId est bien pass
-
-      try {
-        // 🚨 L'appel API utilise maintenant le doctorId passé en argument
-        const result = await apiPrescription.createPrescription(doctorId, patientId, prescriptionData);
-        if (result.data) {
-            // Dans un contexte où on affiche les ordonnances d'UN patient spécifique,
-            // il est préférable de rafraîchir la liste ou d'ajouter si le patient ID correspond.
-            // Pour l'instant, on se contente de l'ajouter si la liste existe.
-            if (!Array.isArray(this.prescriptions)) {
-                this.prescriptions = [];
-            }
-            this.prescriptions.unshift(result.data); // Ajouter au début
-        }
-        this.setSuccess('Ordonnance émise avec succès !');
-        return { success: true, data: result.data }; // Retourne un objet pour une gestion plus flexible
-      } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message;
-        this.setError('Échec de l\'émission de l\'ordonnance: ' + errorMessage);
-        return { success: false, error: errorMessage }; // Retourne un objet pour une gestion plus flexible
-      } finally {
-        this.setLoading(false);
+    // 🔥 ÉTAPE 1: Préparer une consultation d'abord
+    const consultationStore = useConsultationStore();
+    const consultationResult = await consultationStore.prepareConsultationForPrescription(
+      doctorId, 
+      patientId,
+      {
+        motif: prescriptionData.motif || 'Consultation pour ordonnance',
+        diagnostic: prescriptionData.diagnostic,
+        notes: prescriptionData.notes
       }
+    );
+    
+    if (!consultationResult.success) {
+      throw new Error(consultationResult.error || 'Impossible de préparer la consultation');
+    }
+    
+    console.log('✅ Consultation préparée, création ordonnance...');
+    
+    // 🔥 ÉTAPE 2: Créer la prescription
+    const result = await apiPrescription.createPrescription(doctorId, patientId, prescriptionData);
+    
+    if (result.data) {
+      if (!Array.isArray(this.prescriptions)) {
+        this.prescriptions = [];
+      }
+      this.prescriptions.unshift(result.data);
+    }
+    
+    this.setSuccess('Ordonnance émise avec succès !');
+    console.log('✅ Ordonnance créée avec succès:', result.data);
+    
+    return { success: true, data: result.data };
+    
+  } catch (err) {
+    // 🔥 AFFICHER LES ERREURS DE VALIDATION DÉTAILLÉES
+    console.error('❌ Erreur détaillée création prescription:', err.response?.data);
+    
+    const errorMessage = err.response?.data?.message || err.message;
+    const validationErrors = err.response?.data?.errors;
+    
+    if (validationErrors) {
+      console.log('🔍 Erreurs de validation:', validationErrors);
+      // Afficher les erreurs spécifiques
+      Object.keys(validationErrors).forEach(field => {
+        console.log(`- ${field}:`, validationErrors[field]);
+      });
+    }
+    
+    this.setError('Échec de l\'émission de l\'ordonnance: ' + errorMessage);
+    return { 
+      success: false, 
+      error: errorMessage,
+      validationErrors: validationErrors 
+    };
+  } finally {
+    this.setLoading(false);
+  }
+},
+
+    /**
+     * Version simplifiée utilisant les IDs stockés
+     * @param {object} prescriptionData - Données de la prescription
+     */
+    async createPrescriptionSimple(prescriptionData) {
+      if (!this.currentDoctorId || !this.currentPatientId) {
+        throw new Error('DoctorId ou PatientId non défini');
+      }
+      return await this.createPrescription(this.currentDoctorId, this.currentPatientId, prescriptionData);
     },
 
     /**
      * Charge toutes les prescriptions pour un patient donné.
      * @param {number} patientId - L'ID du patient
      */
-    /**
-     * Charge toutes les prescriptions pour un patient donné.
-     * @param {number} patientId - L'ID du patient
-     */
-  /**
-     * Charge toutes les prescriptions pour un patient donné.
-     * @param {number} patientId - L'ID du patient
-     */
-   async fetchPatientPrescriptions(patientId) {
-      this.clearMessages();
-      this.setLoading(true);
-      try {
-        // 🚨 CORRECTION : On nomme la variable 'data' car le service ne retourne que les données.
-        const data = await apiPrescription.fetchPatientPrescriptions(patientId);
+    async fetchPatientPrescriptions(patientId) {
+  this.clearMessages();
+  this.setLoading(true);
+  try {
+    console.log('🔄 Store: Chargement prescriptions patient ID:', patientId);
+    const data = await apiPrescription.fetchPatientPrescriptions(patientId);
+    
+    console.log('✅ Store: Données reçues de l\'API:', {
+      type: typeof data,
+      isArray: Array.isArray(data),
+      count: Array.isArray(data) ? data.length : 'non-array',
+      sample: Array.isArray(data) && data.length > 0 ? data[0] : 'vide'
+    });
+    
+    this.prescriptions = Array.isArray(data) ? data : [];
+    this.setSuccess('Ordonnances chargées avec succès.');
+    
+  } catch (err) {
+    console.error('❌ Store: Erreur chargement prescriptions:', err);
+    const errorMessage = err.response?.data?.message || err.message;
+    this.setError('Échec du chargement: ' + errorMessage);
+    this.prescriptions = [];
+  } finally {
+    this.setLoading(false);
+  }
+},
 
-        // 🚨 CORRECTION : On log 'data' directement, sans accéder à '.data'
-        console.log("API a renvoyé les ordonnances brutes :", data);
-
-        // 🚨 CORRECTION : On utilise 'data' pour mettre à jour l'état.
-        this.prescriptions = Array.isArray(data) ? data : [];
-        this.setSuccess('Ordonnances du patient chargées avec succès.');
-      } catch (err) {
-        // ... (gestion des erreurs inchangée) ...
-      } finally {
-        this.setLoading(false);
-      }
-    },
     /**
      * Charge une prescription spécifique par son ID.
-     * @param {number} patientId - L'ID du patient auquel appartient la prescription (peut être omis si l'API ne l'exige pas)
+     * @param {number} patientId - L'ID du patient
      * @param {number} prescriptionId - L'ID de la prescription
      * @returns {Promise<boolean>} Indique si le chargement a réussi
      */
-    async fetchPrescriptionById(patientId, prescriptionId) { // patientId peut être optionnel selon l'API
+    async fetchPrescriptionById(patientId, prescriptionId) {
       this.clearMessages();
       this.setLoading(true);
       try {
-        const data = await apiPrescription.fetchPrescriptionById(patientId, prescriptionId); // Assurez-vous que apiPrescription.fetchPrescriptionById gère patientId
+        const data = await apiPrescription.fetchPrescriptionById(patientId, prescriptionId);
         this.currentPrescription = data;
         this.setSuccess('Ordonnance chargée avec succès.');
         return true;
@@ -145,7 +206,7 @@ export const usePrescriptionStore = defineStore('prescription', {
     /**
      * Met à jour une prescription existante.
      * @param {number} prescriptionId - L'ID de la prescription à mettre à jour
-     * @param {object} updateData - Données de mise à jour (inclut potentiellement 'lines')
+     * @param {object} updateData - Données de mise à jour
      * @returns {Promise<boolean>} Indique si la mise à jour a réussi
      */
     async updatePrescription(prescriptionId, updateData) {

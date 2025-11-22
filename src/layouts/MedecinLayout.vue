@@ -1,13 +1,14 @@
 <template>
   <div v-if="authStore.initialized && doctorId" class="layout-wrapper">
     <aside class="sidebar">
-      <router-link :to="{ name: 'DoctorDashboard' }" class="nav-item" exact-active-class="active">Accueil</router-link>
-      <router-link :to="{ name: 'Appointments', params: { id: doctorId } }" class="nav-item">Rendez-vous</router-link>
-      <router-link :to="{ name: 'TeleConsultation', params: { id: doctorId } }" class="nav-item">Téléconsultations</router-link>
-      <router-link :to="{ name: 'Patients', params: { id: doctorId } }" class="nav-item">Patients</router-link>
-      <router-link :to="{ name: 'Ordonnances', params: { id: doctorId } }" class="nav-item">Ordonnances</router-link>
-      <router-link :to="{ name: 'RapportsView' }" class="nav-item">Rapports Médicaux</router-link>
-      <router-link :to="{ name: 'Messagerie', params: { id: doctorId } }" class="nav-item">Messagerie</router-link>
+      <!-- Correction de la balise router-link pour éviter l'erreur de compilation -->
+      <router-link :to="{ name: 'DoctorDashboard' }" class="nav-item" active-class="active">Accueil</router-link>
+      <router-link :to="{ name: 'Appointments', params: { id: doctorId } }" class="nav-item" active-class="active">Rendez-vous</router-link>
+      <router-link :to="{ name: 'TeleConsultation', params: { id: doctorId } }" class="nav-item" active-class="active">Téléconsultations</router-link>
+      <router-link :to="{ name: 'Patients', params: { id: doctorId } }" class="nav-item" active-class="active">Patients</router-link>
+      <router-link :to="{ name: 'Ordonnances', params: { id: doctorId } }" class="nav-item" active-class="active">Ordonnances</router-link>
+      <router-link :to="{ name: 'RapportsView' }" class="nav-item" active-class="active">Rapports Médicaux</router-link>
+      <router-link :to="{ name: 'Messagerie', params: { id: doctorId } }" class="nav-item" active-class="active">Messagerie</router-link>
     </aside>
 
     <div class="main-content">
@@ -28,6 +29,7 @@ import { useAuthStore } from '@/stores/authStores'
 import { computed } from 'vue'
 
 const authStore = useAuthStore()
+// doctorId est l'ID de profil (doctor_id) qui est stocké dans authStore.profileId
 const doctorId = computed(() => authStore.profileId)
 </script>
 

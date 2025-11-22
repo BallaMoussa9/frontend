@@ -10,7 +10,11 @@
       <div v-if="urgentistStore.error" class="error-message">{{ urgentistStore.error }}</div>
       <div v-if="urgentistStore.success" class="success-message">{{ urgentistStore.success }}</div>
 
-      <div class="table-container" v-if="!urgentistStore.loading">
+      <div v-else-if="urgentistStore.allUrgentists?.length === 0 && !urgentistStore.loading" class="info-message">
+        Aucun urgentiste trouvé.
+      </div>
+
+      <div class="table-container" v-else-if="urgentistStore.allUrgentists?.length > 0">
         <table class="urgentistes-table">
           <thead>
             <tr>
@@ -27,7 +31,8 @@
           <tbody>
             <tr v-for="(doc, index) in urgentistStore.allUrgentists" :key="doc.id">
               <td>{{ index + 1 }}</td>
-              <td>{{ doc.user?.first_name }} {{ doc.user?.last_name }}</td> <td>{{ doc.user?.email }}</td>
+              <td>{{ doc.user?.first_name }} {{ doc.user?.last_name }}</td> 
+              <td>{{ doc.user?.email }}</td>
               <td>{{ doc.user?.phone }}</td>
               <td>{{ doc.user?.city }}</td>
               <td>{{ doc.speciality }}</td>
@@ -44,64 +49,52 @@
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
   </AdminLayout>
 </template>
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { useUrgentistStore } from '@/stores/urgentistStore'
 
 const router = useRouter()
 const urgentistStore = useUrgentistStore()
 
 const ajouterUrgentiste = () => {
-  //urgentistStore.resetFeedback(); // ✨ Réinitialise les messages avant de naviguer
-  router.push({ name: 'AddUserUrgentist' }) // ✨ Assurez-vous que le nom de la route est correct (ici 'AddUrgentist')
+  urgentistStore.resetFeedback();
+  router.push({ name: 'AddUserUrgentist' }) 
 }
 
 const supprimer = async (id) => {
   if (confirm('Voulez-vous vraiment supprimer cet urgentiste ?')) {
     try {
       await urgentistStore.deleteUrgentist(id)
-      // Pas besoin de recharger la liste, le filtre dans le store est réactif
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      // L'erreur est déjà dans urgentistStore.error
     }
   }
 }
 
 onMounted(() => {
-  urgentistStore.resetFeedback(); // ✨ Réinitialise les messages au chargement de la page
+  urgentistStore.resetFeedback();
   urgentistStore.fetchAllUrgentists()
 })
 </script>
 
 
 <style scoped>
-/* Votre style existant est parfait ici */
-.loading-message { color: #0040d0; margin-bottom: 10px; }
-.error-message { color: #d9534f; margin-bottom: 10px; }
-.success-message { color: #5cb85c; margin-bottom: 10px; }
-
-.urgentistes-page { padding: 32px; }
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.header h2 { font-size: 22px; color: #002580; }
-.btn-add { background-color: #0040d0; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-
-.table-container { overflow-x: auto; }
-.urgentistes-table { width: 100%; border-collapse: collapse; background-color: white; border-radius: 12px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.04); }
-.urgentistes-table th, .urgentistes-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #eee; }
-.urgentistes-table th { background-color: #f5f7fa; color: #333; }
-
-.badge-dispo { color: green; font-weight: bold; }
-.badge-indispo { color: red; font-weight: bold; }
-
-.btn-action, .btn-delete { background: none; border: none; cursor: pointer; font-size: 16px; margin-right: 8px; }
-
+/* Le style n'a pas changé */
+.info-message {
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+  color: #555;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 20px;
+}
 .loading-message { color: #0040d0; margin-bottom: 10px; }
 .error-message { color: #d9534f; margin-bottom: 10px; }
 .success-message { color: #5cb85c; margin-bottom: 10px; }

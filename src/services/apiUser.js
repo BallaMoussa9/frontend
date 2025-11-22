@@ -269,3 +269,24 @@ export const apiExportReport = async (data) => {
         throw new Error(error.response?.data?.message || 'Échec de la génération et du téléchargement du rapport.');
     }
 };
+/**
+ * 🚨 NOUVELLE FONCTION API : Récupère le profil Urgentiste (FirstResponder) par ID utilisateur.
+ * @param {number} userId L'ID de l'utilisateur.
+ * @returns {Promise<object>} L'objet FirstResponder { id: firts_responder_id, user_id: userId, ...}.
+ */
+export const apiGetFirstResponderByUserId = async (userId) => {
+    try {
+        console.log(`Calling API to get First Responder by user ID: ${userId}`);
+
+        // 🔑 NOUVELLE ROUTE : Nous allons définir ceci dans Laravel.
+        // Utilisation du même schéma que l'infirmier : /first-responder/user/{userId}
+        const response = await API.get(`/urgentist/user/${userId}`);
+
+        // On suppose que le backend Laravel renvoie directement l'objet { id: firts_responder_id, user_id: userId, ...}
+        return response.data;
+
+    } catch (error) {
+        console.error(`Erreur lors du chargement de l'Urgentiste par ID utilisateur ${userId} (API):`, error);
+        throw new Error(error.response?.data?.message || `Échec de la récupération de l'Urgentiste pour l'utilisateur ${userId}.`);
+    }
+};

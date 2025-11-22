@@ -3,14 +3,12 @@
     <div class="form-container">
       <h2>Modifier le Médecin Urgentiste</h2>
 
-      <!-- Messages globaux -->
       <div v-if="urgentistStore.loading" class="loading-message">Chargement...</div>
       <div v-if="urgentistStore.error && typeof urgentistStore.error === 'string'" class="error-message">
         {{ urgentistStore.error }}
       </div>
       <div v-if="urgentistStore.success" class="success-message">{{ urgentistStore.success }}</div>
 
-      <!-- Formulaire -->
       <form @submit.prevent="submit" v-if="!urgentistStore.loading && urgentistStore.currentUrgentist">
         <fieldset>
           <legend>Infos générales</legend>
@@ -109,9 +107,6 @@ const handlePhoto = (e) => {
 const submit = async () => {
   errors.value = {}
 
-  // 🔎 log du form brut avant de créer FormData
-  console.log('📋 Formulaire brut (Vue):', { ...form })
-
   const data = new FormData()
   Object.keys(form).forEach(k => {
     if (form[k] !== null && form[k] !== '') {
@@ -120,25 +115,29 @@ const submit = async () => {
   })
   data.append('_method', 'PUT')
 
-  // 🔎 log du FormData envoyé
-  console.log('📤 Données envoyées (FormData):', Object.fromEntries(data.entries()))
-
   try {
     await urgentistStore.updateUrgentist(route.params.id, data)
 
+    // Vérifier si l'erreur est un objet (erreurs de validation)
     if (urgentistStore.error && typeof urgentistStore.error === 'object') {
       errors.value = urgentistStore.error.errors || {}
     } else if (!urgentistStore.error) {
+      // Rediriger vers la liste après succès
       router.push({ name: 'Urgence' })
     }
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour:', error)
+    // S'il y a une erreur jetée par handleAction, la gérer ici
+    if (error.errors) {
+        errors.value = error.errors;
+    }
   }
 }
 
 // récupère l'urgentiste au montage
 onMounted(() => {
-  urgentistStore.fetchOneUrgentist(route.params.id)
+  // 🔑 CORRECTION DE L'ERREUR : Utilisation de l'action correcte du store
+  urgentistStore.fetchUrgentist(route.params.id) 
 })
 
 // met à jour le form quand l’urgentiste est chargé

@@ -90,10 +90,10 @@ const isPatientRole = computed(() =>
 /* Sidebar fixe */
 .sidebar {
   position: fixed;
-  top: 64px; /* CORRECTION: Décalage de 64px (hauteur du AppLayout topbar) */
+  top: 64px;
   left: 0;
   width: 220px;
-  height: calc(100vh - 64px); /* CORRECTION: Hauteur ajustée */
+  height: calc(100vh - 64px);
   background-color: #002580;
   padding: 20px;
   color: white;
@@ -112,7 +112,7 @@ const isPatientRole = computed(() =>
 }
 
 .sidebar a {
-  display: block;
+  display: block; /* Corrigé : display: block pour éviter les problèmes d'alignement */
   color: white;
   padding: 10px 12px;
   text-decoration: none;

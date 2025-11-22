@@ -1,46 +1,117 @@
 <template>
-  <nav class="urgentiste-sidebar">
-    <div class="sidebar-header">
-      <div class="user-role">Urgentiste</div>
+  <div v-if="urgentistId" class="urgentiste-layout-wrapper">
+    
+    <nav class="urgentiste-sidebar">
+      <div class="sidebar-header">
+        <div class="user-role">Urgentiste</div>
+        <small class="profile-id">ID: #{{ urgentistId }}</small>
+      </div>
+      
+      <ul class="sidebar-menu">
+        
+        <RouterLink :to="{ name: 'UrgentisteDashboard', params: { id: urgentistId } }" 
+                    class="menu-item" 
+                    active-class="active">
+          <i class="icon fas fa-bell"></i>
+          <span>Alertes SOS (Tableau de bord)</span> 
+          <span class="badge new-alerts">3</span> 
+        </RouterLink>
+        
+        <RouterLink :to="{ name: 'UrgentisteProfile', params: { id: urgentistId } }" 
+                    class="menu-item" 
+                    active-class="active">
+          <i class="icon fas fa-user-circle"></i>
+          <span>Mon Profil</span>
+        </RouterLink>
+        
+        <RouterLink :to="{ name: 'UrgentisteHistorique', params: { id: urgentistId } }" 
+                    class="menu-item" 
+                    active-class="active">
+          <i class="icon fas fa-history"></i>
+          <span>Historique</span>
+        </RouterLink>
+      </ul>
+      
+      <a @click="handleLogout" class="menu-item logout-item">
+        <i class="icon fas fa-sign-out-alt"></i>
+        <span>Déconnexion</span>
+      </a>
+
+    </nav>
+    
+    <div class="main-content">
+      <slot />
     </div>
-    <ul class="sidebar-menu">
-      <RouterLink to="/urgentiste/dashboard" class="menu-item" active-class="active">
-        <i class="icon fas fa-tachometer-alt"></i>
-        <span>Tableau de bord</span>
-      </RouterLink>
-      <RouterLink to="/urgentiste/alerts" class="menu-item" active-class="active">
-        <i class="icon fas fa-bell"></i>
-        <span>Alertes SOS</span>
-        <span class="badge new-alerts">3</span> </RouterLink>
-      <RouterLink to="/urgentiste/profile" class="menu-item" active-class="active">
-        <i class="icon fas fa-user-circle"></i>
-        <span>Mon Profil</span>
-      </RouterLink>
-      <RouterLink to="/urgentiste/historique" class="menu-item" active-class="active">
-        <i class="icon fas fa-history"></i>
-        <span>Historique</span>
-      </RouterLink>
-    </ul>
-  </nav>
+  </div>
+
+  <div v-else class="loading-screen">
+      <p>Chargement des données Urgentiste...</p>
+  </div>
 </template>
 
 <script setup>
-// Pas de logique spécifique ici, c'est principalement de la navigation.
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores/authStores' // ⚠️ Assurez-vous que le chemin est correct
+import { useRouter } from 'vue-router';
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+// 🔑 Récupère l'ID du profil Urgentiste (firts_responders.id)
+const urgentistId = computed(() => authStore.profileId)
+
+function handleLogout() {
+    authStore.logout()
+    router.push({ name: 'Login' }) // Rediriger après déconnexion
+}
 </script>
 
 <style scoped>
-/* 🎨 Styles inspirés de votre image de tableau de bord */
+/* ---------------------------------
+   LAYOUT GLOBAL
+--------------------------------- */
+.urgentiste-layout-wrapper { 
+    display: flex; 
+    min-height: 100vh; 
+    background-color: #f8fafc; /* Couleur de fond de l'application */
+    padding-top: 64px; /* Espace pour la TopBar/NavBar qui doit être fixe en haut */
+}
+
+.main-content {
+    /* Laisse de l'espace pour la sidebar fixe */
+    margin-left: 250px; 
+    flex: 1;
+    padding: 20px;
+    /* Rendre le contenu scrollable */
+    overflow-y: auto; 
+    width: calc(100% - 250px);
+}
+
+.loading-screen { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    font-size: 1.1rem; 
+    color: #002580; 
+}
+
+/* ---------------------------------
+   SIDEBAR (Styles existants ajustés)
+--------------------------------- */
 .urgentiste-sidebar {
-  width: 250px; /* Largeur de la barre latérale */
-  background-color: #2c3e50; /* Couleur sombre pour contraste */
+  width: 250px; 
+  background-color: #2c3e50; 
   color: white;
   padding: 10px 0;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   height: 100vh;
   position: fixed;
   top: 64px; /* Sous la topbar */
   left: 0;
   z-index: 900;
+  display: flex; /* Permet au bouton de déconnexion de se positionner en bas */
+  flex-direction: column;
 }
 
 .sidebar-header {
@@ -54,12 +125,23 @@
   font-weight: bold;
 }
 
+.profile-id {
+    display: block;
+    color: #a0a6aa;
+    font-size: 0.8em;
+    margin-top: 5px;
+}
+
 .sidebar-menu {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1; /* Permet à la liste de prendre tout l'espace restant */
 }
 
+/* ---------------------------------
+   ÉLÉMENTS DE MENU
+--------------------------------- */
 .menu-item {
   display: flex;
   align-items: center;
@@ -76,9 +158,9 @@
 }
 
 .menu-item.active {
-  background-color: #ec5865; /* Couleur vive pour l'actif, comme le rose de votre image */
+  background-color: #ec5865; 
   color: white;
-  border-left: 4px solid #f0f0f0; /* Barre latérale de l'élément actif */
+  border-left: 4px solid #f0f0f0; 
 }
 
 .icon {
@@ -94,5 +176,16 @@
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
+}
+
+/* Style spécifique pour la déconnexion */
+.logout-item {
+    margin-top: 20px; /* Espace le lien de déconnexion */
+    color: #ec5865;
+    border-top: 1px solid #3d5a80;
+}
+.logout-item:hover {
+    background-color: #5c1f24;
+    color: white;
 }
 </style>

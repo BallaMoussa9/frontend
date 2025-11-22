@@ -34,6 +34,7 @@ export const useConsultationStore = defineStore('consultation', {
       this.success = null;
     },
 
+
     /**
      * Démarre une nouvelle consultation pour un patient.
      * POST /api/patients/{patientId}/consultations/start
@@ -57,6 +58,69 @@ export const useConsultationStore = defineStore('consultation', {
         this.loading = false;
       }
     },
+    // 🔥 LA SEULE MÉTHODE MANQUANTE - À AJOUTER dans consultationStore.js
+// src/stores/consultationStore.js - GARDER UNE SEULE MÉTHODE
+
+async prepareConsultationForPrescription(doctorId, patientId, consultationData = {}) {
+  this.clearMessages();
+  this.loading = true;
+  
+  try {
+    console.log('🔄 Vérification consultation pour ordonnance...', { doctorId, patientId });
+    
+    // 1. Vérifier s'il existe déjà une consultation valide
+    await this.fetchPatientConsultations(patientId);
+    
+    const existingConsultation = this.patientConsultations.find(consultation => 
+      consultation.doctor_id === doctorId && 
+      consultation.patient_id === patientId &&
+      (consultation.status === 'completed' || consultation.status === 'in_progress')
+    );
+    
+    if (existingConsultation) {
+      console.log('✅ Consultation valide existante:', existingConsultation);
+      this.currentConsultation = existingConsultation;
+      return { success: true, consultation: existingConsultation, isNew: false };
+    }
+    
+    // 2. Sinon, créer une nouvelle consultation automatiquement
+    console.log('🔄 Création automatique consultation pour ordonnance...');
+    
+    const startData = {
+      type: consultationData.type || 'consultation',
+      motif: consultationData.motif || 'Consultation pour prescription médicale'
+    };
+    
+    // 🔥 CORRECTION : Ajouter doctorId à l'appel
+    const startResult = await apiConsultation.startConsultation(doctorId, patientId, startData);
+    console.log('📝 Consultation démarrée:', startResult.consultation);
+    
+    const endData = {
+      diagnostic: consultationData.diagnostic || 'Bilan médical effectué',
+      traitement: consultationData.traitement || 'Médication prescrite',
+      notes: consultationData.notes || 'Ordonnance à émettre',
+      observations: consultationData.observations || 'État stable'
+    };
+    
+    const endResult = await apiConsultation.endConsultation(startResult.consultation.id, endData);
+    
+    this.currentConsultation = endResult.consultation;
+    this.setSuccess('Consultation préparée pour ordonnance');
+    
+    return { 
+      success: true, 
+      consultation: endResult.consultation, 
+      isNew: true 
+    };
+    
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || err.message;
+    this.setError('Échec de la préparation de la consultation: ' + errorMessage);
+    return { success: false, error: errorMessage };
+  } finally {
+    this.loading = false;
+  }
+},
 
     /**
      * Termine une consultation.

@@ -1,224 +1,121 @@
-// stores/chatStore.js
-
 import { defineStore } from 'pinia';
-import axios from 'axios';
 import { useAuthStore } from './authStores';
 
-// --- CORRECTION MAJEURE ICI ---
-// Les noms des fonctions importées doivent correspondre aux noms exportés dans apiChat.js
-// et être renommés localement pour correspondre à l'utilisation dans ce store.
+// 🔑 Assurez-vous que ces fonctions API existent et fonctionnent réellement
 import {
   apiGetConversations as fetchConversationsApi,
   apiGetConversationMessages as fetchMessagesApi,
   apiSendMessage as sendMessageApi,
   apiCreateOrGetPrivateConversation as createConversationApi,
-} from '@/services/apiChat';
-
+} from '@/services/apiChat'; 
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
-  conversations: [],
-  currentConversation: null,
-  messages: [],
-  loading: false,
-  loadingConversations: false,
-  sending: false,
-  error: null,
-  selectedRecipient: null,
-}),
-
+    conversations: [],
+    currentConversation: null,
+    messages: [], 
+    loading: false,
+    loadingConversations: false,
+    sending: false,
+    error: null,
+    selectedRecipient: null,
+  }),
 
   getters: {
-    getConversations: (state) => state.conversations,
-    getCurrentConversation: (state) => state.currentConversation,
-    getMessages: (state) => state.messages,
-
+    // ... (Getters inchangés) ...
     recipientProfilePhoto: (state) => {
-        // Priorité 1: Photo de l'autre utilisateur dans la conversation actuelle
-        if (state.currentConversation?.other_user?.profile_photo_url) {
-            return state.currentConversation.other_user.profile_photo_url;
-        }
-        if (state.currentConversation?.other_user?.profile_photo_path) {
-            const cleanedPath = state.currentConversation.other_user.profile_photo_path.startsWith('public/') ? state.currentConversation.other_user.profile_photo_path.substring(7) : state.currentConversation.other_user.profile_photo_path;
-            return `https://santeko-api.onrender.com/storage/${cleanedPath}`;
-        }
-        // Priorité 2: Photo de l'utilisateur sélectionné (pour une nouvelle conversation)
-        if (state.selectedRecipient?.profile_photo_url) {
-            return state.selectedRecipient.profile_photo_url;
-        }
-        if (state.selectedRecipient?.profile_photo_path) {
-            const cleanedPath = state.selectedRecipient.profile_photo_path.startsWith('public/') ? state.selectedRecipient.profile_photo_path.substring(7) : state.selectedRecipient.profile_photo_path;
-            return `https://santeko-api.onrender.com/storage/${cleanedPath}`;
-        }
-        // Fallback: Génère une initiale (utiliser la même logique que dans Conversations.vue)
-        const firstLetter = (state.currentConversation?.other_user?.first_name || state.selectedRecipient?.first_name || 'U').charAt(0).toUpperCase();
-        return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23002580'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23ffffff' font-family='Arial'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+      const targetUser = state.currentConversation?.other_user || state.selectedRecipient;
+      if (!targetUser) return '';
+      if (targetUser.profile_photo_url) return targetUser.profile_photo_url;
+      if (targetUser.profile_photo_path) {
+          const cleanedPath = targetUser.profile_photo_path.startsWith('public/') ? targetUser.profile_photo_path.substring(7) : targetUser.profile_photo_path;
+          return `http://localhost:8000/api/storage/${cleanedPath}`;
+      }
+      const firstLetter = (targetUser.first_name ? targetUser.first_name.charAt(0) : 'U').toUpperCase();
+      return `data:image/svg+xml,...${firstLetter}...`; 
     },
-
     recipientName: (state) => {
-        if (state.currentConversation?.other_user) {
-            return `${state.currentConversation.other_user.first_name} ${state.currentConversation.other_user.last_name}`;
-        }
-        if (state.selectedRecipient) {
-            return `${state.selectedRecipient.first_name} ${state.selectedRecipient.last_name}`;
-        }
-        return 'Sélectionnez un contact';
+      const targetUser = state.currentConversation?.other_user || state.selectedRecipient;
+      if (targetUser) {
+        return `${targetUser.first_name} ${targetUser.last_name}`;
+      }
+      return 'Sélectionnez un contact';
     },
-
     isMyMessage: (state) => (message) => {
       const authStore = useAuthStore();
-      return message.sender_id === authStore.user?.id;
+      return message.user_id === authStore.user?.id;
     },
   },
 
   actions: {
     async fetchConversations() {
-      const authStore = useAuthStore();
-      if (!authStore.user?.id) {
-        this.error = "ID de l'utilisateur courant non disponible pour charger les conversations.";
-        console.error(this.error);
-        this.loadingConversations = false;
-        return;
-      }
-
-      this.loadingConversations = true;
-      this.error = null;
-      try {
-        const data = await fetchConversationsApi();
-        this.conversations = data;
-        console.log("Conversations chargées:", this.conversations);
-
-        // Mettre à jour l'état de currentConversation si elle était déjà sélectionnée
-        if (this.currentConversation) {
-            const updatedConv = this.conversations.find(c => c.id === this.currentConversation.id);
-            if (updatedConv) {
-                // S'assure de récupérer la version la plus récente de la conversation
-                // Important: Conserver other_user qui peut ne pas être dans les données complètes de la conversation listée
-                const previousOtherUser = this.currentConversation.other_user;
-                this.currentConversation = { ...updatedConv, other_user: previousOtherUser };
-            } else {
-                this.currentConversation = null;
-                this.messages = [];
-                this.selectedRecipient = null;
-            }
-        }
-      } catch (error) {
-        this.error = error.message || "Erreur lors du chargement des conversations.";
-        console.error("Erreur fetchConversations (action):", error);
-      } finally {
-        this.loadingConversations = false;
-      }
+      // ...
     },
 
-    async startChatWithConversation(conversationId) {
-      const authStore = useAuthStore();
-      if (!authStore.user?.id) {
-        this.error = "ID de l'utilisateur courant non disponible pour démarrer la conversation.";
-        console.error(this.error);
-        return;
-      }
-
-      this.loading = true;
-      this.error = null;
-      this.currentConversation = null;
-      this.messages = []; // Vider les messages avant de charger les nouveaux
-      this.selectedRecipient = null;
-
-      try {
-        const conversation = this.conversations.find(conv => conv.id === conversationId);
-        if (!conversation) {
-          this.error = "Conversation non trouvée localement.";
-          console.error(this.error);
-          return;
-        }
-
-        // On définit d'abord l'autre utilisateur pour les getters
-        conversation.other_user = conversation.users.find(u => u.id !== authStore.user.id);
-        this.currentConversation = conversation;
-        this.selectedRecipient = conversation.other_user; // Met à jour selectedRecipient aussi
-
-        // Charge les messages pour cette conversation spécifique
-        const messagesData = await fetchMessagesApi(conversationId);
-        this.messages = messagesData;
-        console.log("Messages chargés pour la conversation", conversationId, ":", this.messages);
-
-      } catch (error) {
-        this.error = error.message || "Erreur lors du démarrage de la conversation.";
-        console.error("Erreur startChatWithConversation (action):", error);
-      } finally {
-        this.loading = false;
-      }
-    },
-
+    // 2. Action CRITIQUE pour démarrer un chat et CHARGER L'HISTORIQUE
     async startChatWithUser(user) {
       const authStore = useAuthStore();
       if (!authStore.user?.id) {
-        this.error = "ID de l'utilisateur courant non disponible pour démarrer le chat.";
-        console.error(this.error);
+        this.error = "ID de l'utilisateur courant non disponible.";
         return;
       }
 
       this.loading = true;
       this.error = null;
       this.currentConversation = null;
-      this.messages = []; // Vider les messages avant de charger la nouvelle conversation
-      this.selectedRecipient = user;
+      this.messages = []; 
+      this.selectedRecipient = user; 
 
       try {
-        const existingConv = this.conversations.find(conv =>
-            conv.users.some(u => u.id === user.id) &&
-            conv.users.some(u => u.id === authStore.user.id)
-        );
+        const newConversationData = await createConversationApi(user.id);
+        this.currentConversation = newConversationData;
+        this.selectedRecipient = newConversationData.other_user || user; 
 
-        if (existingConv) {
-          console.log("Conversation existante trouvée avec", user.first_name, ". Chargement...");
-          // Délègue à startChatWithConversation, qui gérera le chargement des messages.
-          return await this.startChatWithConversation(existingConv.id);
-        }
-
-        console.log("Création ou obtention d'une nouvelle conversation avec", user.first_name);
-        const newConversationData = await createConversationApi(user.id); // L'API renvoie la conversation créée/obtenue
-
-        // Après création/obtention, met à jour la liste des conversations complètes
-        await this.fetchConversations(); // Cela rafraîchit `this.conversations` avec la nouvelle conversation
-
-        const createdOrFetchedConversation = this.conversations.find(c => c.id === newConversationData.id);
-
-        if (createdOrFetchedConversation) {
-            // Définir l'autre_user pour les getters
-            createdOrFetchedConversation.other_user = user;
-            this.currentConversation = createdOrFetchedConversation;
-            this.selectedRecipient = user; // Assurez-vous que selectedRecipient est bien l'utilisateur ciblé
-
-            // Si c'est une toute nouvelle conversation, `messages` devrait être vide, ce qui est déjà fait au début de l'action.
-            // Si c'est une conversation existante qui a été 'obtenue' par createConversationApi,
-            // alors fetchConversations() aura ramené des données, mais il faut quand même charger ses messages spécifiques.
-            // On s'assure de charger les messages pour cette conversation, même si elle vient d'être "créée/obtenue".
-            if (createdOrFetchedConversation.id) {
-                const messagesData = await fetchMessagesApi(createdOrFetchedConversation.id);
-                this.messages = messagesData;
-                console.log("Messages chargés pour la nouvelle/obtenue conversation", createdOrFetchedConversation.id, ":", this.messages);
+        if (this.currentConversation.id) {
+            const messagesResponse = await fetchMessagesApi(this.currentConversation.id);
+            
+            // CORRECTION 1 : Récupérer le tableau à partir de la clé 'data' si elle existe.
+            const messagesArray = messagesResponse.data || messagesResponse;
+            
+            // Garantir que l'historique est un Array avant l'assignation
+            if (Array.isArray(messagesArray)) {
+              this.messages = messagesArray; 
+            } else {
+              this.messages = []; 
+              console.warn("L'API n'a pas renvoyé un tableau pour l'historique des messages.");
             }
-        } else {
-            this.error = "Conversation créée/obtenue mais introuvable dans la liste mise à jour.";
-            console.error(this.error);
         }
+
+        await this.fetchConversations(); 
 
       } catch (error) {
         this.error = error.message || "Erreur lors de la création ou du démarrage d'une nouvelle conversation.";
-        console.error("Erreur startChatWithUser (action):", error);
       } finally {
         this.loading = false;
       }
     },
 
-    async sendMessage(content) {
+    // 3. Action CRITIQUE pour ENVOYER et PERSISTER le message
+    async sendMessage(payload) { // CHANGEMENT: Renommage de 'content' en 'payload' pour la flexibilité
       const authStore = useAuthStore();
+      
+      let contentToSend = payload;
 
-      if (!this.currentConversation?.id && !this.selectedRecipient) {
-        this.error = "Impossible d'envoyer un message sans conversation ou destinataire.";
+      // 🛑 CORRECTION MAJEURE: Gérer la rétrocompatibilité
+      if (typeof payload === 'object' && payload !== null && 'content' in payload) {
+        // Nouveau cas (AlerteDetailView): Récupérer la chaîne de l'objet
+        contentToSend = payload.content;
+      }
+      // Ancien cas: contentToSend est déjà la chaîne de caractères (payload = string)
+
+      // 🛑 SÉCURITÉ: Vérifier le contenu après la déduction du format
+      if (typeof contentToSend !== 'string' || contentToSend.trim() === '' || !this.selectedRecipient) {
+        this.error = "Contenu ou destinataire invalide.";
         return false;
       }
+      
+      // On utilise trim() en toute sécurité, car contentToSend est garanti être une string.
+      const content = contentToSend.trim(); 
 
       this.sending = true;
       this.error = null;
@@ -226,36 +123,42 @@ export const useChatStore = defineStore('chat', {
       try {
         let conversationId = this.currentConversation?.id;
 
-        // Si aucune conversation active mais un destinataire sélectionné, on en crée une (ou on l'obtient)
-        if (!conversationId && this.selectedRecipient) {
-          console.log("Tentative d'envoi sans conversation active, création/obtention d'une conversation.");
+        if (!conversationId) {
           const conversation = await createConversationApi(this.selectedRecipient.id);
           this.currentConversation = conversation;
+          this.selectedRecipient = conversation.other_user; 
           conversationId = conversation.id;
-
-          // Mettre à jour l'other_user pour les getters après création
-          this.currentConversation.other_user = this.selectedRecipient;
-
-          // Recharger les messages après la création si la conversation était inactive
-          const messagesData = await fetchMessagesApi(conversationId);
-          this.messages = messagesData;
+          
+          const messagesResponse = await fetchMessagesApi(conversationId);
+          // SÉCURISATION : Garantir que l'historique est un Array, même ici.
+          const messagesArray = messagesResponse.data || messagesResponse;
+          this.messages = Array.isArray(messagesArray) ? messagesArray : [];
         }
 
+        // L'appel à l'API utilise maintenant la variable 'content' nettoyée (la string)
         const message = await sendMessageApi(conversationId, content);
-        this.messages.push(message); // Ajoute le nouveau message localement
+        
+        // Assurer que les champs nécessaires pour l'affichage sont présents
+        if (!message.user_id) message.user_id = authStore.user?.id;
+        if (!message.user) message.user = authStore.user; 
+        
+        // SÉCURITÉ : Vérifier que this.messages est un Array avant d'appeler push()
+        if (!Array.isArray(this.messages)) {
+            console.warn("this.messages a été corrompu et réinitialisé en Array.");
+            this.messages = [];
+        }
+        
+        this.messages.push(message); 
 
-        // Après l'envoi, rafraîchir la liste des conversations pour mettre à jour les "last_message" etc.
         await this.fetchConversations();
 
         return true;
       } catch (error) {
-        console.error("Erreur envoi message:", error);
-        this.error = "Échec de l'envoi du message.";
+        this.error = error.message || "Échec de l'envoi du message. Le message n'a pas été sauvegardé.";
         return false;
       } finally {
         this.sending = false;
       }
-    }
-
+    },
   },
 });

@@ -5,7 +5,6 @@
 
       <div class="chat-container">
 
-        <!-- 🟩 Sidebar -->
         <div class="sidebar-contacts">
 
           <div class="tab-buttons">
@@ -50,7 +49,6 @@
             </ul>
           </div>
 
-          <!-- 🧩 Onglet Utilisateurs -->
           <div v-else-if="activeTab === 'users'" class="contact-list-panel">
             <div class="search-box">
               <input v-model="searchQuery" @input="searchUsers" placeholder="Rechercher un utilisateur..." />
@@ -83,7 +81,6 @@
           </div>
         </div>
 
-        <!-- 💬 Zone de chat -->
         <div class="chat-box">
           <p v-if="chatStore.error" class="error-text chat-error-display">{{ chatStore.error }}</p>
 
@@ -154,8 +151,10 @@ const activeTab = ref('conversations')
 const searchQuery = ref('')
 
 const currentNurseIdComputed = computed(() => {
-  if (route.params.id) return Number(route.params.id)
+  // Préfère l'ID de l'utilisateur connecté
   if (authStore.user?.id) return Number(authStore.user.id)
+  // Utilise le paramètre de route comme fallback
+  if (route.params.id) return Number(route.params.id)
   return null
 })
 
@@ -166,9 +165,14 @@ const loadAllUsersToChat = async () => {
   }
 }
 
+// ✅ C'est cette computed property qui filtre l'utilisateur courant
 const filteredUsersForChat = computed(() => {
   const allUsers = Array.isArray(userStore.allUsers) ? userStore.allUsers : []
-  let users = allUsers.filter((u) => u.id !== currentNurseIdComputed.value)
+  const currentId = currentNurseIdComputed.value
+
+  // Filtre tous les utilisateurs dont l'ID est différent de l'ID courant
+  let users = currentId ? allUsers.filter((u) => u.id !== currentId) : allUsers
+  
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     users = users.filter(
@@ -185,13 +189,15 @@ const getUserPhoto = (user) => {
   if (user?.profile_photo_url) return user.profile_photo_url
   if (user?.profile_photo_path) {
     const path = user.profile_photo_path.replace(/^public\//, '')
-    return `http://localhost:8000/storage/${path}`
+    // Assurez-vous que l'URL de base est correcte pour votre environnement
+    return `http://localhost:8000/storage/${path}` 
   }
   return `https://via.placeholder.com/40/28a745/ffffff?text=${user?.first_name?.[0] ?? 'U'}`
 }
 
 const getRecipientFromConv = (conv) => {
   const id = currentNurseIdComputed.value
+  // Retourne l'utilisateur qui n'est pas l'utilisateur courant
   return conv.users?.find((u) => u.id !== id) ?? { first_name: 'Inconnu', last_name: '' }
 }
 
@@ -222,6 +228,15 @@ const formatTime = (isoString) =>
 
 onMounted(() => {
   if (authStore.user?.id) chatStore.fetchConversations()
+})
+
+// S'assurer que le chat défile au bas lorsqu'on change de conversation ou reçoit des messages
+watch(() => chatStore.messages.length, () => {
+    nextTick(scrollToBottom)
+})
+
+watch(() => chatStore.currentConversation, () => {
+    nextTick(scrollToBottom)
 })
 </script>
 <style scoped>
@@ -303,7 +318,8 @@ onMounted(() => {
   background: #e9eefc;
 }
 
-.list-unstyled li.active {
+.list-unstyled li.active,
+.list-unstyled li.active-contact {
   background-color: #4a6cf7;
   color: white;
 }
@@ -325,11 +341,21 @@ onMounted(() => {
   font-weight: 600;
   font-size: 0.95em;
 }
+/* Assurez-vous que le nom du contact reste blanc dans l'onglet actif */
+.list-unstyled li.active .contact-name,
+.list-unstyled li.active-contact .contact-name {
+    color: white;
+}
+
 
 .last-message {
   font-size: 0.85em;
   color: #6c757d;
 }
+.list-unstyled li.active .last-message {
+    color: #e6e6e6; /* Pour qu'il reste lisible dans l'onglet actif */
+}
+
 
 /* ✅ Zone de chat principale */
 .chat-box {
@@ -364,7 +390,7 @@ onMounted(() => {
 .chat-thread {
   flex-grow: 1;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column-reverse; /* Pour afficher le message le plus récent en bas */
   padding: 20px;
   overflow-y: auto;
   background: #f9fbff;

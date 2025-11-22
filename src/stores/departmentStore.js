@@ -6,7 +6,7 @@ import {
     apiStoreDepartment,
     apiUpdateDepartment,
     apiDeleteDepartment,
-    apiGetDepartmentById // ✅ Importez la nouvelle fonction
+    apiGetDepartmentById // ✅ Importé et utilisé
 } from "@/services/apiDepartment";
 
 export const useDepartmentStore = defineStore('department', {
@@ -45,13 +45,13 @@ export const useDepartmentStore = defineStore('department', {
             }
         },
 
-        // ✅ NOUVEAU : Action pour récupérer un département par son ID
+        // ✅ Action pour récupérer un département par son ID (Correct)
         async fetchDepartmentById(id) {
             this.loading = true;
             this.error = null;
             try {
-                const response = await apiGetDepartmentById(id); // Utilisez la nouvelle fonction de service
-                return response.data.data; // Retournez les données du département
+                const response = await apiGetDepartmentById(id);
+                return response.data.data;
             } catch (error) {
                 this.error = error.message;
                 throw error;

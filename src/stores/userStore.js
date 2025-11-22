@@ -20,6 +20,7 @@ import {
     apiGetDoctorByUserId,
     apiGetNurseByUserId,
     apiExportReport, // 🔑 NOUVEL IMPORT : Fonction API pour l'exportation de rapport
+    apiGetFirstResponderByUserId,
 } from "@/services/apiUser"; // Assurez-vous que apiExportReport est bien défini dans ce fichier ou un autre importé.
 
 export const useUserStore = defineStore('user', {
@@ -28,6 +29,7 @@ export const useUserStore = defineStore('user', {
         // État pour la gestion des utilisateurs (par un admin)
         users: [],
         allUsers: [],
+        responsibleUsers: [],
         pagination: {
             current_page: 1,
             last_page: 1,
@@ -45,7 +47,7 @@ export const useUserStore = defineStore('user', {
         currentPatientProfile: null,
         currentDoctorProfile: null,
         currentNurseProfile: null,
-
+        currentFirstResponderProfile: null,
         // Nouveaux états pour la gestion des rôles et départements
         availableRoles: [],
         availableDepartments: [],
@@ -105,6 +107,75 @@ export const useUserStore = defineStore('user', {
                 this.loading = false;
             }
         },
+        async fetchResponsibleUsers() {
+            this.loading = true;
+            this.clearFeedback();
+            try {
+                // ⚠️ Vous DEVEZ créer une nouvelle fonction API qui ne retourne que les utilisateurs éligibles
+                // Pour l'instant, nous allons utiliser fetchAllUsers comme substitut (Moins performant mais évite une erreur API)
+                // Idéalement: const response = await apiGetResponsibleUsers();
+                await this.handleAction(async () => {
+                    const response = await apiGetAllUsers(); // Utilisation d'une fonction existante comme placeholder
+                    
+                    // Optionnel: Filtrez-les côté client si l'API ne le fait pas, ex: par rôle "doctor" ou "admin"
+                    this.responsibleUsers = response.map(user => ({
+                         // Nous supposons que vous avez un champ 'role' pour l'affichage
+                         ...user,
+                         role: user.roles && user.roles.length > 0 ? user.roles[0].name : 'N/A', 
+                    }));
+
+                }, 'Responsables potentiels chargés.');
+            } catch (error) {
+                this.setError(`Échec du chargement des responsables : ${error.message}`);
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+        /**
+     * NOUVELLE ACTION : Récupère la liste complète des profils FirstResponder (Urgentistes) 
+     * avec leurs données utilisateur.
+     */
+    async fetchAllFirstResponders() {
+        this.loading = true;
+        this.clearFeedback();
+        this.allFirstResponders = []; 
+
+        try {
+            console.log('--- USER STORE LOG: Démarrage de fetchAllFirstResponders ---');
+            
+            // NOTE: L'appel API suppose qu'il cible la route GET /urgentist/
+            const response = await API.get('/urgentist'); 
+            
+            // 🔑 LOG 1 : Afficher la réponse Axios complète
+            console.log('--- USER STORE LOG: Réponse Axios complète reçue ---', response);
+
+            // 🔑 LOG 2 : Afficher l'objet de pagination Laravel (response.data)
+            console.log('--- USER STORE LOG: Contenu de response.data (Objet de pagination) ---', response.data);
+
+            // 🔑 LOG 3 : Afficher le tableau des résultats (response.data.data)
+            if (response.data && response.data.data) {
+                console.log('--- USER STORE LOG: Tableau des résultats (response.data.data) ---', response.data.data);
+                this.allFirstResponders = response.data.data;
+            } else if (response.data) {
+                 // Si c'est un tableau non paginé (response.data est le tableau)
+                 console.log('--- USER STORE LOG: Réponse non paginée (response.data) ---', response.data);
+                 this.allFirstResponders = Array.isArray(response.data) ? response.data : [];
+            } else {
+                 console.log('--- USER STORE LOG: Aucune donnée trouvée ou structure inattendue. ---');
+            }
+
+            this.setSuccess('Liste des médecins urgentistes chargée avec succès.');
+        } catch (error) {
+            // 🔑 LOG ERREUR : Afficher l'objet d'erreur complet
+            console.error("--- USER STORE ERREUR: Erreur complète lors du chargement des urgentistes ---", error);
+
+            this.setError(`Échec du chargement de la liste des urgentistes: ${error.message}`);
+            throw error;
+        } finally {
+            this.loading = false;
+        }
+    },
 
         /**
          * Charge le profil docteur et retourne l'ID du docteur.
@@ -322,6 +393,32 @@ export const useUserStore = defineStore('user', {
                 this.loading = false;
             }
         },
+        async fetchUrgentistByUserId(userId) {
+            this.loading = true;
+            this.clearFeedback();
+            this.currentFirstResponderProfile = null; // Réinitialiser
+            try {
+                console.log(`UserStore: Tentative de récupération du profil Urgentiste pour l'utilisateur ID: ${userId}`);
+                // Appel à la fonction API que nous venons de créer
+                const response = await apiGetFirstResponderByUserId(userId);
+                
+                // Le backend doit retourner l'objet FirstResponder.
+                this.currentFirstResponderProfile = response;
+                
+                console.log(`UserStore: Profil Urgentiste récupéré:`, this.currentFirstResponderProfile);
+                this.setSuccess('Profil Urgentiste chargé avec succès.');
+                
+                // Retourne l'ID du profil Urgentiste (firts_responders.id)
+                // On suppose que l'objet FirstResponder a une propriété 'id'
+                return response.id; 
+            } catch (error) {
+                this.setError(`Échec du chargement du profil Urgentiste: ${error.message}`);
+                console.error("UserStore: Erreur dans fetchUrgentistByUserId:", error);
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
         // ----------------------------------------------------
         // Autres actions
         // ----------------------------------------------------
@@ -332,6 +429,7 @@ export const useUserStore = defineStore('user', {
         getCurrentPatientProfile: (state) => state.currentPatientProfile,
         getCurrentDoctorProfile: (state) => state.currentDoctorProfile,
         getCurrentNurseProfile: (state) => state.currentNurseProfile,
+        getCurrentFirstResponderProfile: (state) => state.currentFirstResponderProfile,
 
         // Getters pour la gestion des utilisateurs (par un admin)
         getUsers: (state) => state.users,
