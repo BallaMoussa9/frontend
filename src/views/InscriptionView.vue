@@ -13,7 +13,7 @@
             <input v-model="form.last_name" type="text" placeholder="Nom" required />
             <p v-if="errors['last_name']" class="error">{{ errors['last_name'][0] }}</p>
           </div>
-        </div>
+        </div> 
 
         <!-- Date de naissance & Téléphone -->
         <div class="form-row">

@@ -149,7 +149,7 @@ export const usePrescriptionStore = defineStore('prescription', {
      */
     async fetchPatientPrescriptions(patientId) {
   this.clearMessages();
-  this.setLoading(true);
+  this.setLoading(true); 
   try {
     console.log('🔄 Store: Chargement prescriptions patient ID:', patientId);
     const data = await apiPrescription.fetchPatientPrescriptions(patientId);

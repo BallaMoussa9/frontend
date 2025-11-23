@@ -224,7 +224,7 @@
       </div>
     </div>
   </SidebarLayout>
-</template>
+</template> 
 
 <script setup>
 import { onMounted, computed, watch } from 'vue';
