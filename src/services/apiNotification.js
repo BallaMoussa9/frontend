@@ -15,3 +15,6 @@ const handleNotificationRequest = async (promise) => {
 export const apiGetUserNotifications = () => handleNotificationRequest(API.get('/user/notifications'));
 export const apiMarkNotificationAsRead = (notificationId) => handleNotificationRequest(API.post(`/user/notifications/${notificationId}/mark-as-read`));
 export const apiMarkAllNotificationsAsRead = () => handleNotificationRequest(API.post('/user/notifications/mark-all-as-read'));
+// 🚀 Nouvelle route pour envoyer une notification par l’admin
+export const apiSendAdminNotification = (payload) =>
+  handleNotificationRequest(API.post('/admin/send-mail', payload));

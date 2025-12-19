@@ -62,15 +62,15 @@
             <textarea id="message" v-model="message" rows="7" placeholder="Écrivez le contenu de votre notification ici..."></textarea>
           </div>
 
-          <div v-if="sendError" class="message-box error-message">
-            Erreur: {{ sendError }}
+          <div v-if="notificationStore.sendError" class="message-box error-message">
+            Erreur: {{ notificationStore.sendError }}
           </div>
-          <div v-if="sendSuccess" class="message-box success-message">
+          <div v-if="notificationStore.sendSuccess" class="message-box success-message">
             Notification(s) envoyée(s) avec succès !
           </div>
 
-          <button type="submit" :disabled="sending || !isFormValid">
-            <span v-if="sending">Envoi en cours...</span>
+          <button type="submit" :disabled="notificationStore.sending || !isFormValid">
+            <span v-if="notificationStore.sending">Envoi en cours...</span>
             <span v-else>📤 Envoyer la notification</span>
           </button>
         </form>
@@ -83,9 +83,10 @@
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useUserStore } from '@/stores/userStore'
-import { useNotificationStore } from '@/stores/notificationStore';
-  
+import { useNotificationStore } from '@/stores/notificationStore'
+
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 
 // États réactifs pour les champs du formulaire
 const sendToAll = ref(false)
@@ -94,11 +95,6 @@ const searchQuery = ref('')
 const type = ref('')
 const subject = ref('')
 const message = ref('')
-
-// États pour la gestion de l'envoi (maintenant directement dans le composant)
-const sending = ref(false)
-const sendError = ref(null)
-const sendSuccess = ref(false)
 
 // Propriété calculée pour filtrer la liste des utilisateurs affichée
 const filteredUsers = computed(() => {
@@ -124,7 +120,7 @@ const isFormValid = computed(() => {
   return true;
 });
 
-// Fonction de débounce pour la recherche (limite la fréquence des filtrages)
+// Fonction de débounce pour la recherche
 let searchTimeout = null
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
@@ -133,28 +129,22 @@ const debouncedSearch = () => {
 
 // Gère l'envoi du formulaire de notification
 async function handleSendNotification() {
-  // Réinitialiser les messages d'état avant un nouvel envoi
-  sendError.value = null;
-  sendSuccess.value = false;
-
   if (!isFormValid.value) {
     alert("Veuillez remplir le type, le sujet, le message et sélectionner au moins un destinataire ou choisir d'envoyer à tous.");
     return;
   }
 
-  sending.value = true; // Indiquer que l'envoi est en cours
+  const payload = {
+    recipient_ids: sendToAll.value ? [] : selectedRecipientIds.value,
+    type: type.value,
+    subject: subject.value,
+    message: message.value,
+    send_to_all: sendToAll.value,
+  };
 
-  try {
-    const payload = {
-      recipient_ids: sendToAll.value ? [] : selectedRecipientIds.value,
-      type: type.value,
-      subject: subject.value,
-      message: message.value,
-      send_to_all: sendToAll.value,
-    };
-    await apiSendAdminNotification(payload); // Appel direct à la fonction API
-    sendSuccess.value = true; // Indiquer le succès
-    
+  await notificationStore.sendNotification(payload);
+
+  if (notificationStore.sendSuccess) {
     // Réinitialiser le formulaire après un envoi réussi
     sendToAll.value = false;
     selectedRecipientIds.value = [];
@@ -162,26 +152,24 @@ async function handleSendNotification() {
     type.value = '';
     subject.value = '';
     message.value = '';
-
-  } catch (e) {
-    sendError.value = e.message; // Capturer l'erreur
-    console.error("Erreur lors de l'envoi de la notification :", e);
-  } finally {
-    sending.value = false; // Finir l'état d'envoi
   }
 }
 
-// Surveille les changements dans les champs du formulaire pour effacer les messages d'état
+// Surveille les changements pour effacer les messages d'état
 watch([subject, message, selectedRecipientIds, sendToAll, type], () => {
-  sendSuccess.value = false;
-  sendError.value = null;
+  notificationStore.sendSuccess = false;
+  notificationStore.sendError = null;
 });
 
-// Au montage du composant, charger la liste complète des utilisateurs
+// Charger la liste des utilisateurs au montage
 onMounted(async () => {
   await userStore.fetchAllUsers()
 })
 </script>
+
+<style scoped>
+/* Styles identiques à ta version précédente */
+</style>
 
 <style scoped>
 /* Les styles restent inchangés */

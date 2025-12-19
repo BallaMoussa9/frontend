@@ -4,13 +4,19 @@ import {
   apiGetUserNotifications,
   apiMarkNotificationAsRead,
   apiMarkAllNotificationsAsRead,
-} from '@/services/apiNotification'; // Assurez-vous que ce fichier existe et contient les fonctions
+  apiSendAdminNotification, // 👈 ajout
+} from '@/services/apiNotification';
 
 export const useNotificationStore = defineStore('notification', {
   state: () => ({
     notifications: [],
     loadingNotifications: false,
     errorNotifications: null,
+
+    // États pour l'envoi de notifications
+    sending: false,
+    sendError: null,
+    sendSuccess: false,
   }),
 
   getters: {
@@ -31,7 +37,6 @@ export const useNotificationStore = defineStore('notification', {
       try {
         const data = await apiGetUserNotifications();
         this.notifications = data;
-        // console.log("Notifications fetched:", data); // Décommentez pour débogage
       } catch (e) {
         this.errorNotifications = e.message;
         console.error("Failed to fetch notifications:", e);
@@ -48,7 +53,6 @@ export const useNotificationStore = defineStore('notification', {
         if (notification) {
           notification.read_at = new Date().toISOString(); // Simule la lecture côté client
         }
-        // console.log(`Notification ${notificationId} marked as read.`); // Décommentez pour débogage
       } catch (e) {
         this.errorNotifications = e.message;
         console.error(`Failed to mark notification ${notificationId} as read:`, e);
@@ -64,20 +68,33 @@ export const useNotificationStore = defineStore('notification', {
             n.read_at = new Date().toISOString(); // Simule la lecture côté client
           }
         });
-        // console.log("All notifications marked as read."); // Décommentez pour débogage
       } catch (e) {
         this.errorNotifications = e.message;
         console.error("Failed to mark all notifications as read:", e);
       }
     },
 
+    // 🚀 Nouvelle action pour envoyer une notification par l’admin
+    async sendNotification(payload) {
+      this.sending = true;
+      this.sendError = null;
+      this.sendSuccess = false;
+      try {
+        await apiSendAdminNotification(payload);
+        this.sendSuccess = true;
+      } catch (e) {
+        this.sendError = e.message;
+        console.error("Failed to send notification:", e);
+      } finally {
+        this.sending = false;
+      }
+    },
+
     // Méthode pour ajouter une notification reçue via WebSocket (temps réel)
     addNotification(newNotification) {
-      // Pour éviter les doublons si la notification est déjà là
       if (!this.notifications.some(n => n.id === newNotification.id)) {
-        this.notifications.unshift(newNotification); // Ajoute au début de la liste
+        this.notifications.unshift(newNotification);
       }
-      // console.log("New notification added:", newNotification); // Décommentez pour débogage
     },
   },
 });
