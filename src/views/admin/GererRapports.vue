@@ -3,9 +3,15 @@
     <div class="rapport-management">
       <div class="header">
         <h2>Rapports médicaux</h2>
+        <span v-if="store.pagination.total">({{ store.pagination.total }} rapports)</span>
         <button class="btn-add" @click="addRapport">➕ Ajouter un rapport</button>
       </div>
-      <div class="table-container">
+
+      <div v-if="store.isLoading" class="loading">Chargement des rapports...</div>
+
+      <div v-if="store.error" class="error-message">{{ store.error }}</div>
+
+      <div class="table-container" v-if="!store.isLoading">
         <table class="rapport-table">
           <thead>
             <tr>
@@ -14,31 +20,32 @@
               <th>Médecin</th>
               <th>Date</th>
               <th>Type</th>
-              <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(rapport, index) in rapports" :key="rapport.id">
+            <tr v-for="(rapport, index) in store.medicalReports" :key="rapport.id">
               <td>{{ index + 1 }}</td>
-              <td>{{ rapport.patient }}</td>
-              <td>{{ rapport.doctor }}</td>
-              <td>{{ rapport.date }}</td>
-              <td>{{ rapport.type }}</td>
               <td>
-                <span :class="rapport.status === 'validé' ? 'badge-valid' : 'badge-attente'">
-                  {{ rapport.status }}
-                </span>
+                {{ rapport.patient?.user?.first_name }} {{ rapport.patient?.user?.last_name }}
               </td>
+              <td>
+                Dr. {{ rapport.doctor?.user?.last_name || 'Non assigné' }}
+              </td>
+              <td>{{ new Date(rapport.created_at).toLocaleDateString() }}</td>
+              <td><span class="type-capsule">{{ rapport.report_type }}</span></td>
               <td>
                 <button class="btn-action" title="Voir">
-                  <RouterLink :to="{ name: 'SeenRapport' }">📑</RouterLink>
+                  <RouterLink :to="{ name: 'SeenRapport', params: { id: rapport.id } }">📑</RouterLink>
                 </button>
                 <button class="btn-action" title="Modifier">
-                  <RouterLink :to="{ name: 'EditRapport' }">✏️</RouterLink>
+                  <RouterLink :to="{ name: 'EditRapport', params: { id: rapport.id } }">✏️</RouterLink>
                 </button>
-                <button class="btn-delete" title="Supprimer">🗑</button>
+                <button @click="confirmDelete(rapport.id)" class="btn-delete" title="Supprimer">🗑</button>
               </td>
+            </tr>
+            <tr v-if="store.medicalReports.length === 0">
+              <td colspan="6" style="text-align: center;">Aucun rapport trouvé.</td>
             </tr>
           </tbody>
         </table>
@@ -49,40 +56,42 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import { onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { useMedicalReportStore } from '@/stores/medicalReportStore'
 
-const rapports = [
-  {
-    id: 1,
-    patient: 'Awa Sidibé',
-    doctor: 'Dr. Diallo',
-    date: '2025-07-10',
-    type: 'Examen cardiaque',
-    status: 'validé',
-  },
-  {
-    id: 2,
-    patient: 'Bakary Koné',
-    doctor: 'Dr. Sangaré',
-    date: '2025-07-09',
-    type: 'Radiographie thorax',
-    status: 'en attente',
-  },
-  {
-    id: 3,
-    patient: 'Mariam Traoré',
-    doctor: 'Dr. Coulibaly',
-    date: '2025-07-08',
-    type: 'Analyse laboratoire',
-    status: 'validé',
-  },
-]
 const router = useRouter()
+const store = useMedicalReportStore()
+
+// Charger les données depuis l'API au montage du composant
+onMounted(() => {
+  store.fetchAllMedicalReports()
+})
+
 const addRapport = () => {
   router.push({ name: 'AddUserRapport' })
 }
+
+const confirmDelete = async (id) => {
+  if (confirm("Voulez-vous vraiment supprimer ce rapport ?")) {
+    await store.deleteMedicalReport(id)
+  }
+}
 </script>
 
+<style scoped>
+/* Tes styles existants + quelques ajouts pour le dynamisme */
+.loading { padding: 20px; text-align: center; color: #0040d0; }
+.error-message { color: red; background: #fee; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+.type-capsule {
+  background: #eef2ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: capitalize;
+  font-size: 0.9em;
+}
+/* ... reste de ton CSS ... */
+</style>
 <style scoped>
 .rapport-management {
   padding: 32px;

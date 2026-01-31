@@ -31,12 +31,12 @@ export const register = async (userData) => {
 
     if (userData.profile_photo) {
       formData.append('profile_photo', userData.profile_photo)
-    }
+    } 
 
     const { data } = await API.post('/register', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-
+ 
     return data
   } catch (error) {
     const errors = error.response?.data?.errors

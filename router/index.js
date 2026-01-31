@@ -162,9 +162,11 @@ const routes = [
 
 },
 {
-  path: '/admin/SeenRapport/',
+  path: '/admin/SeenRapport/:id',
   name: 'SeenRapport',
   component: () => import('../src/views/admin/VoirRapportMedical.vue'),
+  props: true,
+  meta: { requiresAuth: true, role: 'admin' },
 },
 {
     path: '/admin/SearchAll',
@@ -172,9 +174,11 @@ const routes = [
     component: () => import('../src/views/admin/RechercheGlobale.vue'),
   },
   {
-    path: '/admin/EditRapport',
+    path: '/admin/EditRapport/:id/edit',
     name: 'EditRapport',
     component: () => import('../src/views/admin/EditMedicalReport.vue'),
+    props: true,
+    meta: { requiresAuth: true, role: 'admin' },
   },
   {
     path: '/admin/EditMedicalRecord/:id/edit',
