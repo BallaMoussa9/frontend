@@ -46,7 +46,7 @@
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useMedicalReportStore } from '@/stores/medicalReportStore'
+import { useMedicalReportStore } from '@/stores/medicalreportStore'
 
 const route = useRoute()
 const store = useMedicalReportStore()

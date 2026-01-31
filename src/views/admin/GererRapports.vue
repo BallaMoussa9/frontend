@@ -56,7 +56,7 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { onMounted } from 'vue'
+import { onMounted } from 'vue' 
 import { useRouter, RouterLink } from 'vue-router'
 import { useMedicalReportStore } from '@/stores/medicalreportStore'
 
