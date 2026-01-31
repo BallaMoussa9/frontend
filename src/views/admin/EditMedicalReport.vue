@@ -23,7 +23,7 @@
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useMedicalReportStore } from '@/stores/medicalReportStore'
+import { useMedicalReportStore } from '@/stores/medicalreportStore'
 
 const route = useRoute()
 const router = useRouter()
