@@ -1,6 +1,5 @@
 <template>
   <div class="layout-container">
-    <!-- 🔵 Barre de navigation en haut -->
     <header class="topbar">
       <RouterLink to="/" class="brand">SanTeKo</RouterLink>
 
@@ -8,14 +7,13 @@
         <template v-if="auth.isLoggedIn">
           <RouterLink to="" class="user-info">
             <img
-              :src="`https://santeko.abdatytch.com/api/storage/${auth.user?.profile_photo}`"
+              :src="getProfilePhoto(auth.user)"
               alt="Profil"
               class="avatar"
             />
             <span class="username">{{ auth.user?.first_name }}</span>
           </RouterLink>
 
-          <!-- ✅ bouton déconnexion -->
           <button @click="handleLogout" class="logout-btn">Déconnexion</button>
         </template>
 
@@ -26,7 +24,6 @@
       </div>
     </header>
 
-    <!-- 🟢 Contenu principal -->
     <main :class="['main-content', { 'no-padding': withSidebar }]">
       <slot />
     </main>
@@ -47,11 +44,34 @@ defineProps({
   },
 })
 
-// ✅ méthode corrigée
+// ✅ Logique de récupération de photo identique à ton chatStore
+const getProfilePhoto = (user) => {
+  if (!user) return ''; 
+  
+  // 1. Si l'URL complète est déjà fournie
+  if (user.profile_photo_url) {
+    return user.profile_photo_url;
+  }
+
+  // 2. Si on a un chemin relatif (ex: public/profiles/photo.jpg)
+  const path = user.profile_photo_path || user.profile_photo; // Gère les deux noms de clés possibles
+  
+  if (path) {
+    // Nettoyage du préfixe 'public/' si présent
+    const cleanedPath = path.startsWith('public/') ? path.substring(7) : path;
+    // Utilisation de ton domaine d'API (santeko.abdatytch.com)
+    return `https://santeko.abdatytch.com/api/storage/${cleanedPath}`; 
+  }
+
+  // 3. Fallback : Génération d'un avatar avec l'initiale
+  const firstLetter = (user.first_name ? user.first_name.charAt(0) : 'U').toUpperCase();
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23002580'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23ffffff' font-family='Arial'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+};
+
 async function handleLogout() {
   try {
-    await auth.logout() // attend que le logout soit fini
-    await router.push({ name: 'Login' }) // redirection assurée
+    await auth.logout()
+    await router.push({ name: 'Login' })
   } catch (err) {
     console.error('Erreur déconnexion :', err)
   }
