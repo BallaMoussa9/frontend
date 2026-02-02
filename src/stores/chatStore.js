@@ -147,7 +147,7 @@ export const useChatStore = defineStore('chat', {
             console.warn("this.messages a été corrompu et réinitialisé en Array.");
             this.messages = [];
         }
-        
+         
         this.messages.push(message); 
 
         await this.fetchConversations();

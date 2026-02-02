@@ -8,7 +8,7 @@
         <template v-if="auth.isLoggedIn">
           <RouterLink to="" class="user-info">
             <img
-              :src="`http://localhost/storage/${auth.user?.profile_photo}`"
+              :src="`https://santeko.abdatytch.com/api/storage/${auth.user?.profile_photo}`"
               alt="Profil"
               class="avatar"
             />
