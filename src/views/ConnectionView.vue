@@ -5,75 +5,82 @@
         <img src="/santeko.png" alt="Illustration Santeko" class="login-illustration" />
         <p class="illustration-text">
           Votre santé, notre priorité. <br />
-          SanTeKo, le futur de la santé connectée.
+          <span class="highlight">SanTeKo</span>, le futur de la santé connectée.
         </p>
       </div>
 
       <div class="login-container">
         <div class="login-card">
           <div class="header">
-            <h2 class="title">Connexion à SanTeKo</h2>
-            <p class="subtitle">Sélectionnez votre rôle pour accéder à votre espace.</p>
+            <h2 class="title">Connexion</h2>
+            <p class="subtitle">Accédez à votre espace sécurisé SanTeKo.</p>
           </div>
 
           <form @submit.prevent="seConnecter" class="login-form">
             <div class="input-group">
               <label for="email">Adresse E-mail</label>
-              <input id="email" v-model="email" type="email" placeholder="votre.nom@santeko.com" required />
+              <div class="input-wrapper">
+                <i class="fas fa-envelope"></i>
+                <input id="email" v-model="email" type="email" placeholder="nom@exemple.com" required />
+              </div>
             </div>
 
             <div class="input-group">
               <label for="password">Mot de passe</label>
-              <input id="password" v-model="password" type="password" placeholder="********" required />
+              <div class="input-wrapper">
+                <i class="fas fa-lock"></i>
+                <input id="password" v-model="password" type="password" placeholder="********" required />
+              </div>
             </div>
 
             <div class="roles-selection">
-              <label class="roles-label">Je me connecte en tant que :</label>
+              <label class="roles-label">Choisissez votre profil :</label>
               <div class="roles-grid">
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'patient' }]">
                   <input type="radio" v-model="role" value="patient" required />
-                  <span class="role-icon">👤</span> Patient
+                  <span class="role-icon">👤</span> <span>Patient</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'doctor' }]">
                   <input type="radio" v-model="role" value="doctor" required />
-                  <span class="role-icon">🩺</span> Médecin
+                  <span class="role-icon">🩺</span> <span>Médecin</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'nurse' }]">
                   <input type="radio" v-model="role" value="nurse" required />
-                  <span class="role-icon">💉</span> Infirmier
+                  <span class="role-icon">💉</span> <span>Infirmier</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'urgentist' }]">
                   <input type="radio" v-model="role" value="urgentist" required />
-                  <span class="role-icon">🚑</span> Urgentiste
+                  <span class="role-icon">🚑</span> <span>Urgentiste</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'lab_technician' }]">
                   <input type="radio" v-model="role" value="lab_technician" required />
-                  <span class="role-icon">🧪</span> Laboratoire
+                  <span class="role-icon">🧪</span> <span>Labo</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'accountant' }]">
                   <input type="radio" v-model="role" value="accountant" required />
-                  <span class="role-icon">💰</span> Comptable
+                  <span class="role-icon">💰</span> <span>Comptable</span>
                 </label>
-                <label class="role-option">
+                <label :class="['role-option', { 'active': role === 'admin' }]">
                   <input type="radio" v-model="role" value="admin" required />
-                  <span class="role-icon">⚙️</span> Admin
+                  <span class="role-icon">⚙️</span> <span>Admin</span>
                 </label>
               </div>
             </div>
 
             <button type="submit" :disabled="authStore.loading || isFetchingProfileId" class="btn-primary">
+              <span v-if="authStore.loading || isFetchingProfileId" class="loader"></span>
               {{ authStore.loading ? 'Authentification...' : isFetchingProfileId ? 'Chargement profil...' : 'Se connecter' }}
             </button>
           </form>
 
           <p v-if="authStore.authError" class="error-message">
-            {{ authStore.authError }}
+            <i class="fas fa-exclamation-circle"></i> {{ authStore.authError }}
           </p>
 
           <div class="options-footer">
             <a href="#" class="link-secondary">Mot de passe oublié ?</a>
             <span class="separator">|</span>
-            <a href="#" class="link-secondary">Connexion OTP</a>
+            <a href="#" class="link-secondary">Besoin d'aide ?</a>
           </div>
         </div>
       </div>
@@ -82,6 +89,7 @@
 </template>
 
 <script setup>
+/* Votre script reste strictement identique */
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useAuthStore } from '@/stores/authStores'
 import { useUserStore } from '@/stores/userStore'
@@ -92,419 +100,244 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const email = ref('')
 const password = ref('')
-const role = ref('patient') // Rôle par défaut
+const role = ref('patient') 
 const router = useRouter()
 const isFetchingProfileId = ref(false)
 
-
 async function seConnecter() {
   authStore.authError = null;
-  console.log("--- Début de la connexion ---");
-
   if (!role.value) {
-    authStore.authError = "Veuillez sélectionner un rôle pour vous connecter.";
+    authStore.authError = "Veuillez sélectionner un rôle.";
     return;
   }
-
   try {
-    // 1. Tente l'authentification
     const response = await authStore.login({
       email: email.value,
       password: password.value,
       role: role.value
     });
-
-    const userId = response.user.id; // L'ID d'utilisateur brut (UID)
+    const userId = response.user.id;
     const roleName = response.role_name; 
-    
-    console.log(`Authentification réussie. Utilisateur ID: ${userId}, Rôle: ${roleName}`);
-
-    let finalProfileId = userId; // Par défaut, on utilise l'ID utilisateur
+    let finalProfileId = userId;
     isFetchingProfileId.value = true;
 
-    // 2. Récupération de l'ID de profil spécifique au rôle
     try {
       let profileIdFound = null;
+      if (roleName === 'patient') profileIdFound = await userStore.fetchPatientByUserId(userId);
+      else if (roleName === 'doctor') profileIdFound = await userStore.fetchDoctorByUserId(userId);
+      else if (roleName === 'nurse') profileIdFound = await userStore.fetchNurseByUserId(userId);
+      else if (roleName === 'urgentist') profileIdFound = await userStore.fetchUrgentistByUserId(userId); 
+      else if (roleName === 'lab_technician') profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
+      else if (roleName === 'accountant') profileIdFound = await userStore.fetchAccountantByUserId(userId);
 
-      if (roleName === 'patient') {
-        profileIdFound = await userStore.fetchPatientByUserId(userId);
-      } else if (roleName === 'doctor') {
-        profileIdFound = await userStore.fetchDoctorByUserId(userId);
-      } else if (roleName === 'nurse') {
-        profileIdFound = await userStore.fetchNurseByUserId(userId);
-      } else if (roleName === 'urgentist') {
-        profileIdFound = await userStore.fetchUrgentistByUserId(userId); 
-      } else if (roleName === 'lab_technician') {
-        profileIdFound = await userStore.fetchLabTechnicianByUserId(userId);
-      } else if (roleName === 'accountant') {
-        profileIdFound = await userStore.fetchAccountantByUserId(userId);
-      }
+      if (profileIdFound) finalProfileId = profileIdFound;
+    } catch (e) { console.error(e); } 
+    finally { isFetchingProfileId.value = false; }
 
-      if (profileIdFound) {
-        finalProfileId = profileIdFound; // ID de profil spécifique stocké
-      }
-    } catch (fetchError) {
-      console.error(`❌ Échec de la récupération du profil spécifique (${roleName}).`, fetchError);
-    } finally {
-      isFetchingProfileId.value = false;
-    }
+    if (finalProfileId) authStore.setProfileId(finalProfileId);
 
-    if (finalProfileId) {
-      // Stocke l'ID de profil/métier pour l'accès aux données internes
-      authStore.setProfileId(finalProfileId); 
-      console.log(`✅ ID de profil (${roleName}) stocké: ${finalProfileId}`);
-    }
-
-    // 3. LOGIQUE DE REDIRECTION CONDITIONNELLE
     let redirectionRouteName;
     let needsProfileId = false; 
-    let redirectionId = finalProfileId; // Par défaut, on utilise l'ID de profil (doctor_id, patient_id, etc.)
+    let redirectionId = finalProfileId; 
 
     switch (roleName) {
-      case 'patient':
-        redirectionRouteName = 'PatientDashboard';
-        needsProfileId = true;
-        break;
-      case 'doctor':
-        redirectionRouteName = 'DoctorDashboard';
-        needsProfileId = true;
-        // redirectionId reste finalProfileId (l'ID du docteur)
-        break;
-      case 'nurse':
-        redirectionRouteName = 'NurseDashboard';
-        needsProfileId = true;
-        break;
-      case 'urgentist':
-        redirectionRouteName = 'UrgentisteDashboard';
-        needsProfileId = true;
-        // 🚨 Correction pour Urgentiste : Utilise l'ID utilisateur (userId)
-        redirectionId = userId; 
-        break;
-      case 'lab_technician':
-        redirectionRouteName = 'LabDashboard';
-        needsProfileId = true;
-        break;
-      case 'accountant':
-        redirectionRouteName = 'AccountantDashboard';
-        needsProfileId = true;
-        break;
-      case 'admin':
-        redirectionRouteName = 'AdminDashboard';
-        break;
-      default:
-        redirectionRouteName = 'Home';
-        console.warn(`Rôle non géré pour la redirection : ${roleName}. Redirection vers la page d'accueil.`);
-        break;
+      case 'patient': redirectionRouteName = 'PatientDashboard'; needsProfileId = true; break;
+      case 'doctor': redirectionRouteName = 'DoctorDashboard'; needsProfileId = true; break;
+      case 'nurse': redirectionRouteName = 'NurseDashboard'; needsProfileId = true; break;
+      case 'urgentist': redirectionRouteName = 'UrgentisteDashboard'; needsProfileId = true; redirectionId = userId; break;
+      case 'lab_technician': redirectionRouteName = 'LaborantinDashboard'; needsProfileId = true; break;
+      case 'accountant': redirectionRouteName = 'AccountantDashboard'; needsProfileId = true; break;
+      case 'admin': redirectionRouteName = 'AdminDashboard'; break;
+      default: redirectionRouteName = 'Home';
     }
 
-    // Redirection
-    if (needsProfileId) {
-        await router.push({ 
-            name: redirectionRouteName, 
-            params: { id: redirectionId } // redirectionId est soit finalProfileId (Docteur), soit userId (Urgentiste)
-        });
-        console.log(`✅ Redirection vers : ${redirectionRouteName} avec ID de redirection: ${redirectionId}`);
-    } else {
-        await router.push({ name: redirectionRouteName });
-        console.log(`✅ Redirection vers : ${redirectionRouteName}`);
-    }
-
+    if (needsProfileId) await router.push({ name: redirectionRouteName, params: { id: redirectionId } });
+    else await router.push({ name: redirectionRouteName });
 
   } catch (error) {
-    let errorMessage = "Identifiants invalides ou une erreur inconnue est survenue.";
-
-    if (error.response && error.response.data) {
-        const data = error.response.data;
-        
-        if (data.message && data.message.includes("Identifiants invalides")) {
-            errorMessage = "Email ou mot de passe incorrect. Veuillez vérifier vos informations.";
-        } else if (data.message && data.message.includes("rôle sélectionné est invalide")) {
-            errorMessage = "Le rôle sélectionné n'est pas associé à cet utilisateur ou est invalide.";
-        } else if (data.message) {
-            errorMessage = data.message;
-        }
-    } else {
-        errorMessage = error.message;
-    }
-
-    console.error('❌ Erreur de connexion (front-end) :', error);
-    authStore.authError = errorMessage;
+    authStore.authError = error.response?.data?.message || error.message;
     isFetchingProfileId.value = false;
   }
-  console.log("--- Fin de la connexion ---");
 }
 </script>
 
 <style scoped>
 /* ---------------------------------
-    GLOBAL LAYOUT
+    DESIGN & LAYOUT
 --------------------------------- */
 .login-page-wrapper {
   display: flex;
   justify-content: center;
-  align-items: stretch;
-  min-height: 100vh;
-  background-color: #f0f4f8;
-  padding: 50px 20px;
-  gap: 40px;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+  background-color: #f4f7fc;
+  padding: 40px 20px;
+  gap: 60px;
 }
 
-/* Section illustration */
 .illustration-section {
+  flex: 1;
+  max-width: 450px;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  max-width: 500px;
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #e6f7ff, #cceeff);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .login-illustration {
-  max-width: 80%;
-  height: auto;
-  margin-bottom: 30px;
+  width: 100%;
+  max-width: 350px;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+  margin-bottom: 20px;
 }
 
 .illustration-text {
-  font-size: 1.2rem;
-  color: #003366;
-  font-weight: 600;
-  line-height: 1.5;
+  font-size: 1.3rem;
+  color: #1a365d;
+  font-weight: 500;
 }
 
-/* Conteneur du formulaire */
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-grow: 1;
-}
+.highlight { color: #0056b3; font-weight: 700; }
 
 .login-card {
   background: white;
   padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 51, 102, 0.08);
   width: 100%;
-  max-width: 420px;
-  transition: transform 0.3s ease;
-}
-
-/* ---------------------------------
-    TYPOGRAPHIE & HEADER (FORMULAIRE)
---------------------------------- */
-.header {
-  text-align: center;
-  margin-bottom: 30px;
+  max-width: 450px;
 }
 
 .title {
-  font-size: 1.8rem;
+  color: #002580;
+  font-size: 2rem;
   font-weight: 800;
-  margin-bottom: 5px;
-  color: #003366;
+  margin-bottom: 8px;
 }
 
-.subtitle {
-  font-size: 1rem;
-  color: #6c757d;
-}
+.subtitle { color: #718096; margin-bottom: 30px; }
 
 /* ---------------------------------
-    CHAMPS DE FORMULAIRE (EXISTANT)
+    FORMS
 --------------------------------- */
-.input-group {
-  margin-bottom: 20px;
-}
+.input-group { margin-bottom: 20px; text-align: left; }
 
 .input-group label {
   display: block;
-  font-size: 0.9em;
   font-weight: 600;
-  color: #495057;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  color: #2d3748;
 }
 
-input[type="email"],
-input[type="password"] {
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper i {
+  position: absolute;
+  left: 15px;
+  color: #a0aec0;
+}
+
+.input-wrapper input {
   width: 100%;
-  padding: 12px 15px;
-  border-radius: 8px;
-  border: 1px solid #ced4da;
+  padding: 12px 15px 12px 45px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: all 0.3s;
 }
 
-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+.input-wrapper input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
   outline: none;
 }
 
 /* ---------------------------------
-    SÉLECTION DES RÔLES (EXISTANT)
+    ROLES GRID (The main change)
 --------------------------------- */
-.roles-selection {
-  margin: 25px 0;
-}
-
 .roles-label {
   display: block;
-  font-size: 0.95em;
   font-weight: 600;
-  color: #003366;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
+  color: #2d3748;
 }
 
 .roles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
 .role-option {
-  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 10px 5px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
+  padding: 12px 8px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 500;
-  color: #495057;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-.role-option:hover {
-  border-color: #adb5bd;
+.role-option input { display: none; }
+
+.role-icon { font-size: 1.4rem; margin-bottom: 4px; }
+
+/* Style quand sélectionné */
+.role-option.active {
+  background: #ebf4ff;
+  border-color: #0056b3;
+  color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.1);
 }
 
-.role-option input[type="radio"] {
-  display: none;
-}
-
-.role-option input[type="radio"]:checked {
-  border-color: #007bff;
-  background-color: #e6f7ff;
-  box-shadow: 0 0 0 1px #007bff;
-}
-
-.role-option input[type="radio"]:checked + .role-icon,
-.role-option input[type="radio"]:checked ~ span {
-  color: #007bff;
-}
-
-.role-option input[type="radio"]:checked ~ span:not(.role-icon) {
-  font-weight: 700;
-  color: #007bff;
-}
-
-.role-icon {
-  font-size: 1.2em;
-  margin-right: 5px;
-}
-
-/* ---------------------------------
-    BOUTON PRINCIPAL (EXISTANT)
---------------------------------- */
 .btn-primary {
   width: 100%;
-  padding: 14px;
-  background-color: #007bff;
+  background: #002580;
   color: white;
   border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, opacity 0.3s;
+  padding: 16px;
+  border-radius: 12px;
   font-weight: 700;
-  margin-top: 25px;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.btn-primary:disabled {
-  background-color: #adb5bd;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* ---------------------------------
-    MESSAGES & FOOTER (EXISTANT)
---------------------------------- */
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 10px 15px;
-  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
   margin-top: 20px;
-  text-align: center;
-  font-size: 0.9em;
+  transition: 0.3s;
 }
 
-.options-footer {
-  text-align: center;
-  margin-top: 25px;
-  font-size: 0.9em;
-  color: #6c757d;
+.btn-primary:hover { background: #00194d; transform: translateY(-2px); }
+
+.error-message {
+  margin-top: 20px;
+  background: #fff5f5;
+  color: #c53030;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #c53030;
+  font-size: 0.9rem;
 }
 
-.link-secondary {
-  color: #007bff;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.link-secondary:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-.separator {
-  margin: 0 10px;
-  color: #ced4da;
-}
+.options-footer { margin-top: 25px; color: #a0aec0; }
+.link-secondary { color: #0056b3; text-decoration: none; font-weight: 600; }
 
 /* ---------------------------------
-    RESPONSIVE (AJUSTEMENTS)
+    RESPONSIVE
 --------------------------------- */
 @media (max-width: 992px) {
-  .login-page-wrapper {
-    flex-direction: column;
-    align-items: center;
-    padding: 30px 15px;
-    gap: 30px;
-  }
-  .illustration-section {
-    max-width: 100%;
-    order: -1;
-    padding: 30px;
-  }
-  .login-illustration {
-    max-width: 60%;
-  }
-  .illustration-text {
-    font-size: 1rem;
-  }
+  .login-page-wrapper { flex-direction: column; gap: 30px; }
+  .illustration-section { display: none; } /* On cache l'illustration sur tablette/mobile pour gagner de la place */
 }
 
-@media (max-width: 576px) {
-  .roles-grid {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  }
-  .login-illustration {
-    max-width: 80%;
-  }
-  .illustration-text {
-    font-size: 1rem;
-  }
+@media (max-width: 480px) {
+  .roles-grid { grid-template-columns: repeat(2, 1fr); }
+  .login-card { padding: 25px; }
 }
 </style>

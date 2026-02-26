@@ -1,82 +1,102 @@
 <template>
   <AppLayout>
-    <div class="register-container">
-      <h1>Créer un compte</h1>
-      <form @submit.prevent="submitForm">
-        <!-- Nom & Prénom -->
-        <div class="form-row">
-          <div class="field">
-            <input v-model="form.first_name" type="text" placeholder="Prénom" required />
-            <p v-if="errors['first_name']" class="error">{{ errors['first_name'][0] }}</p>
+    <div class="register-wrapper">
+      <div class="register-card fade-in">
+        <div class="register-header">
+          <div class="brand-logo">
+            <span class="plus-icon">✚</span>
           </div>
-          <div class="field">
-            <input v-model="form.last_name" type="text" placeholder="Nom" required />
-            <p v-if="errors['last_name']" class="error">{{ errors['last_name'][0] }}</p>
-          </div>
-        </div> 
-
-        <!-- Date de naissance & Téléphone -->
-        <div class="form-row">
-          <div class="field">
-            <input v-model="form.birth_date" type="date" required />
-            <p v-if="errors['birth_date']" class="error">{{ errors['birth_date'][0] }}</p>
-          </div>
-          <div class="field">
-            <input v-model="form.phone" type="tel" placeholder="Téléphone" required />
-            <p v-if="errors['phone']" class="error">{{ errors['phone'][0] }}</p>
-          </div>
+          <h1>Créer un compte</h1>
+          <p>Rejoignez <strong>SanTeKo</strong>, votre partenaire santé au quotidien.</p>
         </div>
 
-        <!-- Pays & Ville -->
-        <div class="form-row">
-          <div class="field">
-            <input v-model="form.country" type="text" placeholder="Pays" required />
-            <p v-if="errors['country']" class="error">{{ errors['country'][0] }}</p>
+        <form @submit.prevent="submitForm" class="styled-form">
+          <div class="form-section-title">Informations Personnelles</div>
+          
+          <div class="form-row">
+            <div class="field">
+              <label>Prénom</label>
+              <input v-model="form.first_name" type="text" placeholder="Ex: Moussa" required />
+              <p v-if="errors['first_name']" class="error-msg">{{ errors['first_name'][0] }}</p>
+            </div>
+            <div class="field">
+              <label>Nom</label>
+              <input v-model="form.last_name" type="text" placeholder="Ex: Traoré" required />
+              <p v-if="errors['last_name']" class="error-msg">{{ errors['last_name'][0] }}</p>
+            </div>
           </div>
-          <div class="field">
-            <input v-model="form.city" type="text" placeholder="Ville" required />
-            <p v-if="errors['city']" class="error">{{ errors['city'][0] }}</p>
-          </div>
-        </div>
 
-        <!-- Photo de profil -->
-        <div class="form-row">
-          <div class="field">
-            <input type="file" accept="image/*" @change="handleProfilePhoto" />
-            <p v-if="errors['profile_photo']" class="error">{{ errors['profile_photo'][0] }}</p>
+          <div class="form-row">
+            <div class="field">
+              <label>Date de naissance</label>
+              <input v-model="form.birth_date" type="date" required />
+              <p v-if="errors['birth_date']" class="error-msg">{{ errors['birth_date'][0] }}</p>
+            </div>
+            <div class="field">
+              <label>Téléphone</label>
+              <input v-model="form.phone" type="tel" placeholder="+223 ..." required />
+              <p v-if="errors['phone']" class="error-msg">{{ errors['phone'][0] }}</p>
+            </div>
           </div>
-        </div>
 
-        <!-- Aperçu de l’image -->
-        <div v-if="previewUrl" class="form-row">
-          <img :src="previewUrl" alt="Photo de profil" class="preview" />
-        </div>
+          <div class="form-section-title">Localisation & Profil</div>
+          
+          <div class="form-row">
+            <div class="field">
+              <label>Pays</label>
+              <input v-model="form.country" type="text" placeholder="Mali" required />
+            </div>
+            <div class="field">
+              <label>Ville</label>
+              <input v-model="form.city" type="text" placeholder="Bamako" required />
+            </div>
+          </div>
 
-        <!-- Adresse & Email -->
-        <div class="form-row">
-          <div class="field">
-            <input v-model="form.address" type="text" placeholder="Adresse" />
-            <p v-if="errors['address']" class="error">{{ errors['address'][0] }}</p>
+          <div class="field full-width">
+            <label>Adresse</label>
+            <input v-model="form.address" type="text" placeholder="Rue, Quartier..." />
           </div>
-          <div class="field">
-            <input v-model="form.email" type="email" placeholder="Email" required />
-            <p v-if="errors['email']" class="error">{{ errors['email'][0] }}</p>
-          </div>
-        </div>
 
-        <!-- Mot de passe & confirmation -->
-        <div class="form-row">
-          <div class="field">
-            <input v-model="form.password" type="password" placeholder="Mot de passe" required />
-            <p v-if="errors['password']" class="error">{{ errors['password'][0] }}</p>
+          <div class="field full-width">
+            <label>Photo de profil</label>
+            <div class="upload-area">
+              <input type="file" id="file-input" accept="image/*" @change="handleProfilePhoto" hidden />
+              <label for="file-input" class="file-btn">Choisir une image</label>
+              <div v-if="previewUrl" class="preview-circle">
+                <img :src="previewUrl" alt="Aperçu" />
+              </div>
+            </div>
           </div>
-          <div class="field">
-            <input v-model="form.password_confirmation" type="password" placeholder="Confirmer le mot de passe" required />
-          </div>
-        </div>
 
-        <button type="submit">S'inscrire</button>
-      </form>
+          <div class="form-section-title">Sécurité</div>
+
+          <div class="field full-width">
+            <label>Email</label>
+            <input v-model="form.email" type="email" placeholder="email@exemple.com" required />
+            <p v-if="errors['email']" class="error-msg">{{ errors['email'][0] }}</p>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Mot de passe</label>
+              <input v-model="form.password" type="password" placeholder="********" required />
+              <p v-if="errors['password']" class="error-msg">{{ errors['password'][0] }}</p>
+            </div>
+            <div class="field">
+              <label>Confirmer</label>
+              <input v-model="form.password_confirmation" type="password" placeholder="********" required />
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" :disabled="authStore.loading">
+            {{ authStore.loading ? 'Inscription en cours...' : "Créer mon compte" }}
+          </button>
+        </form>
+
+        <p class="login-link">
+          Vous avez déjà un compte ? <router-link to="/login">Se connecter</router-link>
+        </p>
+      </div>
     </div>
   </AppLayout>
 </template>
@@ -86,7 +106,6 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStores'
 import AppLayout from '../layouts/AppLayout.vue'
-import axios from 'axios'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -108,7 +127,6 @@ const form = reactive({
 const previewUrl = ref(null)
 const errors = ref({})
 
-// Gestion image de profil
 function handleProfilePhoto(event) {
   const file = event.target.files[0]
   if (file) {
@@ -117,10 +135,6 @@ function handleProfilePhoto(event) {
   }
 }
 
-// Formatage date
-
-
-// Soumission du formulaire
 async function submitForm() {
   errors.value = {}
 
@@ -142,7 +156,6 @@ async function submitForm() {
     return
   }
 
-
   try {
     await authStore.register(form)
     alert("Inscription réussie")
@@ -158,32 +171,74 @@ async function submitForm() {
 </script>
 
 <style scoped>
-.register-container {
-  max-width: 700px;
-  margin: 0 auto;
+/* Fond de la page */
+.register-wrapper {
+  background: #f0f4f8;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 15px;
+}
+
+/* Carte principale */
+.register-card {
+  background: white;
+  width: 100%;
+  max-width: 750px;
   padding: 40px;
-  font-family: Arial, sans-serif;
-  background-color: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.register-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.plus-icon {
+  background: #0040d0;
+  color: white;
+  width: 50px;
+  height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.05);
+  font-size: 24px;
+  margin-bottom: 15px;
 }
 
 h1 {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #0040d0;
+  color: #002d91;
+  font-size: 28px;
+  margin-bottom: 5px;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Formulaire */
+.form-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0040d0;
+  text-transform: uppercase;
+  margin: 25px 0 15px;
+  letter-spacing: 1px;
 }
 
 .form-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 20px;
+  margin-bottom: 15px;
 }
 
 .field {
@@ -192,39 +247,106 @@ form {
   flex-direction: column;
 }
 
-input[type],
-input[type="email"],
-input[type="password"],
-input[type="tel"],
-input[type="url"],
-input[type="date"],
-input[type="file"] {
-  flex: 1;
-  min-width: 250px;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+.full-width {
+  width: 100%;
+  margin-bottom: 15px;
 }
 
-button {
-  padding: 14px;
-  background-color: #0040d0;
-  color: white;
-  font-size: 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #4a5568;
 }
 
-.preview {
-  max-height: 150px;
+input {
+  padding: 12px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+input:focus {
+  outline: none;
+  border-color: #0040d0;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 64, 208, 0.1);
+}
+
+/* Upload Photo */
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.file-btn {
+  background: #edf2f7;
+  padding: 10px 15px;
   border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #cbd5e0;
 }
 
-.error {
-  color: red;
-  font-size: 0.9em;
-  margin-top: 4px;
+.preview-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #0040d0;
+}
+
+.preview-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Bouton */
+.submit-btn {
+  width: 100%;
+  padding: 15px;
+  background: #0040d0;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover {
+  background: #0032a3;
+}
+
+/* Erreur et Liens */
+.error-msg {
+  color: #e53e3e;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #718096;
+}
+
+.login-link a {
+  color: #0040d0;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .form-row { flex-direction: column; gap: 15px; }
+  .register-card { padding: 25px; }
 }
 </style>

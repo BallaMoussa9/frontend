@@ -1,86 +1,105 @@
 <template>
   <UrgentisteLayout>
     <div class="dashboard-page">
-      <h2>Tableau de Bord des Alertes SOS</h2>
-      <p class="description">Gérez les urgences médicales déclenchées par les patients.</p>
+      <div class="header-section">
+        <h2>Tableau de Bord des Alertes SOS</h2>
+        <p class="description">Gérez les urgences médicales déclenchées par les patients.</p>
+      </div>
 
       <div v-if="!isValidUrgentistId" class="error-message">
-        ⚠️ **ERREUR CRITIQUE :** L'ID de l'Urgentiste n'a pas été trouvé dans l'URL. **Vérifiez que l'URL est bien `/urgentiste/dashboard/ID_VALIDE`**. Le tableau de bord ne peut pas fonctionner sans cet ID.
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+          <strong>ERREUR CRITIQUE :</strong> L'ID de l'Urgentiste n'a pas été trouvé.
+          <p>Vérifiez l'URL de votre navigateur.</p>
+        </div>
       </div>
-      
+
       <div v-else>
         <div class="summary-cards">
           <div class="card pending">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Alertes en Attente</p>
-            <h3>{{ summary.pending }}</h3>
+            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="card-info">
+              <p>En Attente</p>
+              <h3>{{ summary.pending }}</h3>
+            </div>
           </div>
           <div class="card in-progress">
-            <i class="fas fa-user-md"></i>
-            <p>En Cours de Prise en Charge</p>
-            <h3>{{ summary.inProgress }}</h3>
+            <div class="card-icon"><i class="fas fa-user-md"></i></div>
+            <div class="card-info">
+              <p>En Cours</p>
+              <h3>{{ summary.inProgress }}</h3>
+            </div>
           </div>
           <div class="card resolved">
-            <i class="fas fa-check-circle"></i>
-            <p>Alertes Résolues (Total)</p>
-            <h3>{{ summary.resolved }}</h3>
+            <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="card-info">
+              <p>Résolues</p>
+              <h3>{{ summary.resolved }}</h3>
+            </div>
           </div>
         </div>
 
         <div class="alert-section">
-          <h3>Nouvelles et Alertes Actives</h3>
-          
+          <div class="section-header">
+            <h3>Nouvelles et Alertes Actives</h3>
+            <span class="pulse-indicator" v-if="activeAlerts.length > 0">Live</span>
+          </div>
+
           <div v-if="store.loading" class="loading-message">
             <i class="fas fa-spinner fa-spin"></i> Chargement des alertes...
           </div>
 
           <div v-else-if="store.error" class="error-message">
-            Erreur de chargement : {{ store.error }}
+            Erreur : {{ store.error }}
           </div>
-          
+
           <div v-else-if="activeAlerts.length === 0" class="info-message">
-            <i class="fas fa-check-circle"></i> Aucune alerte SOS active pour le moment.
+            <i class="fas fa-check-circle"></i> Aucune alerte SOS active.
           </div>
-          
-          <table v-else class="alert-table">
-            <thead>
-              <tr>
-                <th>ID Alerte</th>
-                <th>Patient</th>
-                <th>Localisation</th>
-                <th>Heure</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="alert in activeAlerts" :key="alert.id" :class="formatStatusClass(alert.status)">
-                <td>{{ alert.id }}</td>
-                <td>{{ formatPatientName(alert) }}</td>
-                <td class="location-cell">
-                  <i class="fas fa-map-marker-alt"></i> Lat: {{ alert.latitude }}, Long: {{ alert.longitude }}
-                  <a :href="`http://maps.google.com/maps?q=${alert.latitude},${alert.longitude}`" 
-                    target="_blank" 
-                    class="map-link">
-                    Voir Carte
-                  </a>
-                </td>
-                <td>{{ formatTime(alert.initiated_at) }}</td>
-                <td :class="['status-badge', formatStatusClass(alert.status)]">
-                  {{ formatStatusDisplay(alert.status) }}
-                </td>
-                <td>
-                  <button 
-                    @click="goToAlertDetail(alert.id)" 
-                    class="btn-action primary"
-                    :disabled="isActionDisabled(alert.status)">
-                    <span v-if="alert.status === 'in_progress'">Détails</span>
-                    <span v-else>Prendre en Charge</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
+          <div v-else class="table-container">
+            <table class="alert-table">
+              <thead>
+                <tr>
+                  <th>ID Alerte</th>
+                  <th>Patient</th>
+                  <th>Localisation</th>
+                  <th>Heure</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="alert in activeAlerts" :key="alert.id">
+                  <td data-label="ID Alerte">#{{ alert.id }}</td>
+                  <td data-label="Patient" class="patient-name">{{ formatPatientName(alert) }}</td>
+                  <td data-label="Localisation">
+                    <div class="location-wrapper">
+                      <span>Lat: {{ alert.latitude }}</span>
+                      <a :href="`https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`" 
+                         target="_blank" class="map-link">
+                        <i class="fas fa-map-marked-alt"></i> Carte
+                      </a>
+                    </div>
+                  </td>
+                  <td data-label="Heure">{{ formatTime(alert.initiated_at) }}</td>
+                  <td data-label="Statut">
+                    <span :class="['status-badge', formatStatusClass(alert.status)]">
+                      {{ formatStatusDisplay(alert.status) }}
+                    </span>
+                  </td>
+                  <td data-label="Actions">
+                    <button 
+                      @click="goToAlertDetail(alert.id)" 
+                      class="btn-action primary"
+                      :disabled="isActionDisabled(alert.status)">
+                      {{ alert.status === 'in_progress' ? 'Détails' : 'Prendre en Charge' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -240,44 +259,179 @@ watch(activeAlerts, (newAlerts) => {
         console.log("[Dashboard] Aucune alerte active à afficher.");
     }
 }, { immediate: true }); 
-</script>
-
-<style scoped>
-.dashboard-page {}
-h2 { color: #002580; margin-bottom: 5px; }
-.description { color: #666; margin-bottom: 20px; }
-.loading-message, .error-message, .info-message {
-    padding: 20px; border-radius: 8px; text-align: center; font-weight: 600; margin-top: 20px; margin-bottom: 20px;
+</script><style scoped>
+/* --- CONFIGURATION GÉNÉRALE --- */
+.dashboard-page {
+  padding: clamp(15px, 3vw, 30px);
+  max-width: 1400px;
+  margin: 0 auto;
 }
-.loading-message { background-color: #e6f7ff; color: #002580; }
-.error-message { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-.info-message { background-color: #e9ecef; color: #555; }
-.summary-cards { display: flex; gap: 20px; margin-bottom: 30px; }
-.card { flex: 1; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
-.card i { font-size: 30px; margin-bottom: 10px; }
-.card h3 { font-size: 28px; margin: 5px 0 0; }
-.card p { font-size: 14px; color: #888; }
-.pending { color: #ff9800; } 
-.in-progress { color: #03a9f4; } 
-.resolved { color: #4caf50; } 
-.alert-section { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-.alert-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.alert-table th, .alert-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-.alert-table th { background-color: #f7f9fc; color: #002580; font-weight: 600; }
-.alert-table tbody tr:hover { background-color: #f9f9f9; }
-.location-cell { display: flex; align-items: center; gap: 10px; }
-.map-link { color: #ec5865; text-decoration: none; font-weight: 500; }
-.status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-.en-attente .status-badge { background-color: #ffe0b2; color: #ff9800; }
-.prise-en-charge .status-badge { background-color: #b3e5fc; color: #03a9f4; }
-.resolue .status-badge { background-color: #c8e6c9; color: #4caf50; }
-.annulee .status-badge { background-color: #f8d7da; color: #721c24; }
-.btn-action { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; transition: opacity 0.2s; }
-.btn-action.primary { background-color: #002580; color: white; }
-.btn-action:hover:not(:disabled) { opacity: 0.9; }
-.btn-action:disabled { cursor: not-allowed; opacity: 0.6; }
 
-@media (max-width: 768px) {
-    .summary-cards { flex-direction: column; }
+.header-section {
+  margin-bottom: 25px;
+}
+
+h2 {
+  color: #002580;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+.description {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* --- CARTES DE RÉSUMÉ --- */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+  border: 1px solid #edf2f7;
+}
+
+.card:hover { transform: translateY(-5px); }
+
+.card-icon {
+  width: 55px;
+  height: 55px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.card-info p { color: #64748b; font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+.card-info h3 { font-size: 1.8rem; font-weight: 800; margin: 0; color: #1e293b; }
+
+.pending .card-icon { background: #fffbeb; color: #f59e0b; }
+.in-progress .card-icon { background: #f0f9ff; color: #0ea5e9; }
+.resolved .card-icon { background: #f0fdf4; color: #10b981; }
+
+/* --- TABLEAU & ALERTES --- */
+.alert-section {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid #edf2f7;
+}
+
+.section-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pulse-indicator {
+  background: #fecaca;
+  color: #dc2626;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  animation: pulse 2s infinite;
+}
+
+/* TABLEAU DESKTOP */
+.alert-table { width: 100%; border-collapse: collapse; }
+.alert-table th {
+  background: #f8fafc;
+  padding: 15px 20px;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.alert-table td { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.patient-name { font-weight: 700; color: #1e293b; }
+
+.location-wrapper { display: flex; flex-direction: column; gap: 5px; }
+.map-link { color: #002580; font-weight: 700; text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
+
+/* BADGES STATUT */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.en-attente { background: #fef3c7; color: #92400e; }
+.prise-en-charge { background: #e0f2fe; color: #075985; }
+.resolue { background: #dcfce7; color: #166534; }
+
+/* BOUTON */
+.btn-action {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.btn-action.primary { background: #002580; color: white; box-shadow: 0 4px 6px rgba(0, 37, 128, 0.2); }
+.btn-action.primary:hover { background: #001a5a; transform: scale(1.02); }
+
+/* --- MOBILE RESPONSIVE RADICAL --- */
+@media (max-width: 992px) {
+  .alert-table thead { display: none; } /* On cache les entêtes */
+  
+  .alert-table tr {
+    display: block;
+    margin: 15px;
+    padding: 15px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+  }
+
+  .alert-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: right;
+  }
+
+  .alert-table td:last-child { border-bottom: none; }
+
+  /* Utilisation du data-label pour afficher les titres à gauche */
+  .alert-table td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: #64748b;
+    font-size: 0.8rem;
+    text-align: left;
+  }
+
+  .btn-action { width: 100%; margin-top: 10px; padding: 14px; }
+  .location-wrapper { align-items: flex-end; }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 </style>

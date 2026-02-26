@@ -11,7 +11,7 @@ const apiLab = {
    * @returns {Promise<object>} La demande d'analyse créée
    */
   async createAnalyseRequest(analyseData) {
-    try {
+    try { 
       const response = await API.post(`/lab/analyses`, analyseData);
       return response.data; // Retourne { message: ..., data: analyse }
     } catch (error) {
@@ -89,6 +89,43 @@ const apiLab = {
       throw error;
     }
   },
+  async getCompletedAnalyses() {
+    try {
+      const response = await API.get(`/lab/ready-analyses`);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des analyses terminées:", error);
+      throw error;
+    }
+  },
+  /**
+   * Récupère tout le stock de sang disponible.
+   * GET /api/lab/blood-stock
+   */
+  async getBloodStock() {
+    try {
+      const response = await API.get(`/lab/blood-stock`);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur récupération stock de sang:", error);
+      throw error;
+    }
+  },
+  /**
+   * Enregistre un prélèvement de sang lié à un patient.
+   * POST /api/lab/blood-store
+   * @param {object} bloodData - { patient_id, unit_number, collection_date, expiration_date, location, status }
+   */
+  async storeBloodUnit(bloodData) {
+    try {
+      const response = await API.post(`/lab/blood-store`, bloodData);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur enregistrement sang:", error);
+      throw error;
+    }
+  }
 };
+
 
 export default apiLab;

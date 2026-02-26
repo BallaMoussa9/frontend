@@ -1,60 +1,65 @@
 <template>
   <UrgentisteLayout>
     <div class="historique-page">
-      <h2 class="page-title">Historique des Interventions (Terminées)</h2>
-      <p class="description">Consultez les détails des alertes SOS qui ont été résolues ou annulées.</p>
+      <div class="header-section">
+        <h2 class="page-title">Historique des Interventions</h2>
+        <p class="description">Consultez les détails des alertes SOS résolues ou annulées.</p>
+      </div>
 
       <div class="filters-bar">
-        <input type="date" v-model="dateFilter" class="filter-input" />
-        <input type="text" v-model="searchQuery" placeholder="Rechercher par ID ou Patient..." class="filter-input search" />
-        <button class="btn-search"><i class="fas fa-search"></i> Filtrer</button>
+        <div class="filter-group">
+          <label class="mobile-label">Filtrer par date</label>
+          <input type="date" v-model="dateFilter" class="filter-input" />
+        </div>
+        <div class="filter-group search-group">
+          <label class="mobile-label">Recherche</label>
+          <input type="text" v-model="searchQuery" placeholder="ID ou Patient..." class="filter-input search" />
+        </div>
+        <button class="btn-search">
+          <i class="fas fa-filter"></i> <span>Appliquer</span>
+        </button>
       </div>
 
       <div v-if="urgentistStore.loadingHistory" class="loading-message-container">
-          <i class="fas fa-spinner fa-spin"></i> Chargement de l'historique...
+          <i class="fas fa-spinner fa-spin"></i> Chargement...
       </div>
       
       <div v-else-if="urgentistStore.historyError" class="error-message-container">
           Erreur: {{ urgentistStore.historyError }}
       </div>
       
-      <div v-else class="historique-table-container">
+      <div v-else class="table-responsive">
         <table class="historique-table">
           <thead>
             <tr>
               <th>ID Alerte</th>
               <th>Date et Heure</th>
               <th>Patient</th>
-              <th>Localisation Initiale</th>
+              <th>Localisation</th>
               <th>Statut Final</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="intervention in filteredHistory" :key="intervention.id">
-              <td>SOS-{{ intervention.id }}</td>
-              <td>{{ formatDateTime(intervention.initiated_at) }}</td>
-              <td>{{ getPatientName(intervention) }}</td>
-              <td>{{ formatLocation(intervention) }}</td>
-              <td class="status-cell">
+              <td data-label="ID Alerte" class="id-cell">SOS-{{ intervention.id }}</td>
+              <td data-label="Date/Heure">{{ formatDateTime(intervention.initiated_at) }}</td>
+              <td data-label="Patient" class="patient-cell">{{ getPatientName(intervention) }}</td>
+              <td data-label="Localisation">{{ formatLocation(intervention) }}</td>
+              <td data-label="Statut" class="status-cell">
                 <span :class="['status-badge', formatStatusClass(intervention.status)]">
                     {{ formatStatusDisplay(intervention.status) }}
                 </span>
               </td>
-              <td>
+              <td data-label="Actions">
                 <button @click="viewDetails(intervention.id)" class="btn-details">
-                  <i class="fas fa-eye"></i> Détails
+                  <i class="fas fa-eye"></i> <span>Détails</span>
                 </button>
               </td>
             </tr>
             <tr v-if="!filteredHistory.length">
               <td colspan="6" class="no-data">
-                <span v-if="(urgentistStore.alertsHistory ?? []).length > 0">
-                    Aucun résultat trouvé pour les critères sélectionnés.
-                </span>
-                <span v-else>
-                    Aucun historique d'intervention trouvé.
-                </span>
+                Aucun historique trouvé.
               </td>
             </tr>
           </tbody>
@@ -174,120 +179,199 @@ onMounted(async () => {
     await urgentistStore.fetchAlertsHistory();
 })
 </script>
-
 <style scoped>
-/* Les styles restent les mêmes */
+.historique-page {
+    padding: clamp(15px, 3vw, 30px);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
 .page-title {
     color: #002580;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    margin-bottom: 5px;
 }
+
 .description {
-    color: #666;
+    color: #64748b;
     margin-bottom: 25px;
 }
-.loading-message-container, .error-message-container {
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 20px;
-    text-align: center;
-    font-weight: 600;
-}
-.loading-message-container {
-    background-color: #e6f7ff;
-    color: #002580;
-}
-.error-message-container {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-.loading-message-container i {
-    margin-right: 10px;
-}
+
+/* --- BARRE DE FILTRES --- */
 .filters-bar {
     display: flex;
     gap: 15px;
-    align-items: center;
     background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    align-items: flex-end;
 }
-.filter-input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
-.filter-input.search {
+
+.search-group {
     flex-grow: 1;
-    max-width: 300px;
 }
+
+.mobile-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.filter-input {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.filter-input:focus {
+    border-color: #002580;
+    outline: none;
+}
+
 .btn-search {
     background-color: #002580;
     color: white;
     border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-}
-.btn-search i {
-    margin-right: 5px;
-}
-.historique-table-container {
-    background-color: white;
+    padding: 12px 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    overflow-x: auto;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
 }
+
+/* --- TABLEAU --- */
+.table-responsive {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
 .historique-table {
     width: 100%;
     border-collapse: collapse;
 }
-.historique-table th, .historique-table td {
-    padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
+
 .historique-table th {
-    background-color: #f7f9fc;
-    color: #002580;
-    font-weight: 600;
+    background-color: #f8fafc;
+    color: #1e293b;
+    padding: 15px 20px;
+    text-align: left;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-bottom: 2px solid #f1f5f9;
 }
-.historique-table tbody tr:hover {
-    background-color: #f9f9f9;
+
+.historique-table td {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+    font-size: 0.95rem;
 }
+
+.id-cell { font-weight: 700; color: #002580; }
+.patient-cell { font-weight: 600; color: #1e293b; }
+
+/* --- STATUTS & BOUTONS --- */
 .status-badge {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.9em;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.75rem;
 }
-.resolved-status {
-    background-color: #c8e6c9;
-    color: #4caf50;
-}
-.cancelled-status {
-    background-color: #f8d7da;
-    color: #dc3545;
-}
+
+.resolved-status { background-color: #dcfce7; color: #166534; }
+.cancelled-status { background-color: #fee2e2; color: #991b1b; }
+
 .btn-details {
     background-color: #ec5865;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 8px 15px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-weight: 600;
+    transition: opacity 0.2s;
 }
-.btn-details i {
-    margin-right: 5px;
+
+/* --- RESPONSIVE MOBILE (Point de rupture 850px) --- */
+@media (max-width: 850px) {
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-input.search {
+        max-width: none;
+    }
+
+    /* Transformation du tableau en cartes */
+    .historique-table thead {
+        display: none;
+    }
+
+    .historique-table tr {
+        display: block;
+        border: 1px solid #e2e8f0;
+        margin: 15px;
+        border-radius: 12px;
+        padding: 10px;
+    }
+
+    .historique-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 12px 10px;
+    }
+
+    .historique-table td:last-child {
+        border-bottom: none;
+    }
+
+    .historique-table td::before {
+        content: attr(data-label);
+        font-weight: 800;
+        color: #64748b;
+        font-size: 0.8rem;
+        text-align: left;
+    }
+
+    .btn-details {
+        width: 100%;
+        padding: 12px;
+    }
 }
-.no-data {
+
+/* Feedback messages */
+.loading-message-container, .error-message-container {
+    padding: 30px;
+    border-radius: 12px;
+    margin-top: 20px;
     text-align: center;
-    font-style: italic;
-    color: #999;
+    font-weight: 600;
+}
+
+.no-data {
+    padding: 40px !important;
+    text-align: center !important;
+    color: #94a3b8;
 }
 </style>

@@ -3,141 +3,145 @@
     <div class="ordonnances-page">
       <h1 class="title">Émission de Prescriptions</h1>
 
-      <p v-if="prescriptionStore.getSuccess" class="message-success">{{ prescriptionStore.getSuccess }}</p>
-      <p v-if="prescriptionStore.getError" class="message-error">{{ prescriptionStore.getError }}</p>
+      <transition name="fade">
+        <div v-if="prescriptionStore.getSuccess" class="message-success">
+          ✅ {{ prescriptionStore.getSuccess }}
+        </div>
+      </transition>
+      <transition name="fade">
+        <div v-if="prescriptionStore.getError" class="message-error">
+          ⚠️ {{ prescriptionStore.getError }}
+        </div>
+      </transition>
       
       <section class="section patient-selection-section">
-        <div>
-            <label for="search-patient">Rechercher un patient :</label>
-            <input
-              id="search-patient"
-              type="text"
-              v-model="searchPatient"
-              placeholder="Nom, ID ou Email du patient..."
-              class="search-input"
-            />
+        <div class="input-group">
+          <label for="search-patient">🔍 Rechercher un patient :</label>
+          <input
+            id="search-patient"
+            type="text"
+            v-model="searchPatient"
+            placeholder="Nom, ID ou Email du patient..."
+            class="search-input"
+          />
         </div>
         
-        <div>
-            <label for="patient-select">Patient sélectionné :</label>
-            <select id="patient-select" v-model="selectedPatientId" @change="fetchPatientHistory" class="select-patient">
-              <option :value="null" disabled>
-                <span v-if="patientStore.loading">Chargement des patients...</span>
-                <span v-else>-- Sélectionnez un patient --</span>
-              </option>
-              <option
-                v-for="patient in filteredPatients"
-                :key="patient.id"
-                :value="patient.id"
-              >
-                {{ patient.user?.first_name }} {{ patient.user?.last_name }} (ID: {{ patient.id }})
-              </option>
-            </select>
-            <p v-if="patientStore.error" class="info-text message-error small-error">Erreur de chargement des patients.</p>
+        <div class="input-group">
+          <label for="patient-select">👤 Patient sélectionné :</label>
+          <select id="patient-select" v-model="selectedPatientId" @change="fetchPatientHistory" class="select-patient">
+            <option :value="null" disabled>
+              {{ patientStore.loading ? 'Chargement...' : '-- Sélectionnez un patient --' }}
+            </option>
+            <option
+              v-for="patient in filteredPatients"
+              :key="patient.id"
+              :value="patient.id"
+            >
+              {{ patient.user?.first_name }} {{ patient.user?.last_name }} (ID: {{ patient.id }})
+            </option>
+          </select>
+          <p v-if="patientStore.error" class="small-error">Erreur de chargement des patients.</p>
         </div>
       </section>
 
       <section v-if="selectedPatient" class="section prescription-form-container">
-        <h2>Créer une nouvelle ordonnance pour: {{ selectedPatient.user?.first_name }} {{ selectedPatient.user?.last_name }}</h2>
+        <h2>Nouvelle ordonnance pour : <span class="patient-highlight">{{ selectedPatient.user?.first_name }} {{ selectedPatient.user?.last_name }}</span></h2>
         
         <div class="new-line-form">
-            <h3>Ajouter un médicament</h3>
-            <form @submit.prevent="addLocalLine" novalidate> 
-                
-                <label for="medication-name">Nom du Médicament:</label>
-                <input
-                    id="medication-name"
-                    type="text"
-                    v-model="newLine.medicationName"
-                    required
-                    placeholder="ex: Paracétamol 500mg"
-                    class="search-input"
-                />
-                
-                <label>Posologie (Dosage):</label>
-                <input type="text" v-model="newLine.dosage" required placeholder="ex: 500mg" />
+          <h3>➕ Ajouter un médicament</h3>
+          <form @submit.prevent="addLocalLine" class="grid-form"> 
+            <div class="form-row full">
+              <label>Nom du Médicament *</label>
+              <input v-model="newLine.medicationName" type="text" required placeholder="ex: Paracétamol 500mg" />
+            </div>
+            
+            <div class="form-row">
+              <label>Posologie *</label>
+              <input v-model="newLine.dosage" type="text" required placeholder="ex: 1 gélule" />
+            </div>
 
-                <label>Fréquence (requis par DB):</label>
-                <input type="text" v-model="newLine.frequency" required placeholder="ex: 3x par jour" />
+            <div class="form-row">
+              <label>Fréquence *</label>
+              <input v-model="newLine.frequency" type="text" required placeholder="ex: 3x par jour" />
+            </div>
 
-                <label>Durée du traitement (requis par DB):</label>
-                <input type="text" v-model="newLine.duration" required placeholder="ex: 7 jours" />
-                
-                <label>Instructions (Optionnel par DB):</label>
-                <input type="text" v-model="newLine.instructions" placeholder="ex: À prendre avec de la nourriture" />
+            <div class="form-row">
+              <label>Durée *</label>
+              <input v-model="newLine.duration" type="text" required placeholder="ex: 7 jours" />
+            </div>
+            
+            <div class="form-row">
+              <label>Instructions</label>
+              <input v-model="newLine.instructions" type="text" placeholder="ex: Après le repas" />
+            </div>
 
-
-                <button class="btn-add-line" type="submit">
-                    ➕ Ajouter cette ligne à l'ordonnance (Brouillon)
-                </button>
-            </form>
+            <button class="btn-add-line" type="submit">
+              Ajouter au brouillon
+            </button>
+          </form>
         </div>
         
         <div class="current-lines">
-          <h3>Lignes de médicaments à envoyer ({{ prescriptionLines.length }})</h3>
+          <h3>📦 Médicaments dans l'ordonnance ({{ prescriptionLines.length }})</h3>
           <ul class="lines-list">
             <li v-if="prescriptionLines.length === 0" class="empty-line">
-                Veuillez ajouter au moins une ligne de prescription ci-dessus.
+              Aucun médicament ajouté pour le moment.
             </li>
             <li v-for="(line, index) in prescriptionLines" :key="index" class="line-item">
-                <span class="line-text">
-                    <strong>{{ line.medicationName }}</strong> : {{ line.dosage }} ({{ line.frequency }}, Durée: {{ line.duration }})
-                </span>
-                <button @click="removeLocalLine(index)" class="btn-remove">X</button>
+              <div class="line-info">
+                <strong>{{ line.medicationName }}</strong> — {{ line.dosage }} ({{ line.frequency }}, {{ line.duration }})
+                <div v-if="line.instructions" class="line-instructions">💡 {{ line.instructions }}</div>
+              </div>
+              <button @click="removeLocalLine(index)" class="btn-remove" title="Supprimer">✕</button>
             </li>
           </ul>
         </div>
 
         <div class="finalization-area">
-            <label>Notes (optionnel):</label>
-            <textarea v-model="finalNotes" rows="2" placeholder="Instructions spéciales, conseils..."></textarea>
-            
-            <button
-                @click="createOrdonnanceAndFinalize"
-                :disabled="prescriptionLines.length === 0 || prescriptionStore.isLoading"
-                class="btn-submit btn-final"
-            >
-                📝 Finaliser et Enregistrer l'Ordonnance Complète
-            </button>
+          <label>📝 Notes du médecin (conseils, régime, etc.) :</label>
+          <textarea v-model="finalNotes" rows="3" placeholder="Notes additionnelles pour le patient..."></textarea>
+          
+          <button
+            @click="createOrdonnanceAndFinalize"
+            :disabled="prescriptionLines.length === 0 || prescriptionStore.isLoading"
+            class="btn-submit"
+          >
+            <span v-if="!prescriptionStore.isLoading">🚀 Finaliser et Enregistrer l'Ordonnance</span>
+            <span v-else>Enregistrement en cours...</span>
+          </button>
         </div>
-
       </section>
 
-      <hr />
-
-      <section v-if="selectedPatientId" class="section">
-        <h2>Historique des prescriptions</h2>
+      <section v-if="selectedPatientId" class="section history-section">
+        <h2>📜 Historique des prescriptions du patient</h2>
         <div v-if="prescriptionStore.isLoading" class="info-text">Chargement de l'historique...</div>
-        <div v-else-if="prescriptionStore.getError" class="message-error">{{ prescriptionStore.getError }}</div>
-
-        <table v-else-if="patientPrescriptions.length" class="ordonnances-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Docteur</th>
-              <th>Détails</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="ord in patientPrescriptions" :key="ord.id">
-              <td>{{ formatDate(ord.created_at) }}</td>
-              <td>Dr. {{ ord.doctor?.user?.last_name || 'Inconnu' }}</td>
-              <td>
-                <span v-if="ord.lines && ord.lines.length > 0">
-                    {{ ord.lines.length }} ligne(s) : {{ ord.lines[0].medicament_name || ord.lines[0].name }}...
-                </span>
-                <span v-else class="info-text">
-                    Aucune ligne de médicament enregistrée.
-                </span>
-              </td>
-              <td>
-                <span :class="getStatusClass(ord.status)">{{ ord.status }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="info-text">Aucune ordonnance trouvée pour ce patient.</p>
+        
+        <div v-else-if="patientPrescriptions.length" class="table-wrapper">
+          <table class="ordonnances-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Docteur</th>
+                <th>Contenu</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="ord in patientPrescriptions" :key="ord.id">
+                <td>{{ formatDate(ord.created_at) }}</td>
+                <td>Dr. {{ ord.doctor?.user?.last_name || 'Non spécifié' }}</td>
+                <td>
+                  <span v-if="ord.lines?.length">
+                    {{ ord.lines[0].medicament_name }} {{ ord.lines.length > 1 ? '(+' + (ord.lines.length - 1) + ')' : '' }}
+                  </span>
+                  <span v-else class="info-text">Vide</span>
+                </td>
+                <td><span :class="getStatusClass(ord.status)">{{ ord.status }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="info-text">Aucune prescription antérieure.</p>
       </section>
     </div>
   </MedecinLayout>
@@ -148,15 +152,11 @@ import MedecinLayout from '@/layouts/MedecinLayout.vue'
 import { ref, computed, onMounted } from 'vue'
 import { usePatientStore } from '@/stores/patientStore'
 import { usePrescriptionStore } from '@/stores/prescriptionStore'
-import { useAuthStore } from '@/stores/authStores' 
-import { useUserStore } from '@/stores/userStore' 
 import { useRoute } from 'vue-router' 
 
-// --- Stores ---
+// --- Initialisation ---
 const patientStore = usePatientStore()
 const prescriptionStore = usePrescriptionStore()
-const authStore = useAuthStore() 
-const userStore = useUserStore() 
 const route = useRoute()
 
 // --- État Local ---
@@ -175,149 +175,90 @@ const newLine = ref({
 // --- Computed ---
 const doctorIdFromRoute = computed(() => {
     const id = route.params.id || route.params.doctorId; 
-    const doctorId = id ? parseInt(id) : null;
-    console.log(`[ROUTE LOG] Doctor ID lu depuis l'URL: ${doctorId}`);
-    return doctorId;
-});
-
-const rawPatients = computed(() => {
-    let patientsSource = patientStore.patients;
-    if (patientsSource && typeof patientsSource === 'object' && Array.isArray(patientsSource.data)) {
-        return patientsSource.data;
-    }
-    const result = Array.isArray(patientsSource) ? patientsSource : [];
-    return result;
+    return id ? parseInt(id) : null;
 });
 
 const filteredPatients = computed(() => {
-    const patients = rawPatients.value;
+    let source = patientStore.patients?.data || patientStore.patients || [];
+    if (!Array.isArray(source)) return [];
+    
     const query = searchPatient.value.trim().toLowerCase();
-    
-    if (!query) {
-        return patients.length > 50 ? patients.slice(0, 50) : patients; 
-    }
-    
-    return patients.filter(p => {
-        if (!p || !p.user) return false;
-        const fullName = `${p.user.first_name || ''} ${p.user.last_name || ''}`.toLowerCase();
-        const email = (p.user.email || '').toLowerCase();
-        const patientId = String(p.id);
+    if (!query) return source.slice(0, 20);
 
-        return (
-            fullName.includes(query) ||
-            email.includes(query) ||
-            patientId.includes(query)
-        );
+    return source.filter(p => {
+        const fullName = `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.toLowerCase();
+        return fullName.includes(query) || p.user?.email?.toLowerCase().includes(query) || String(p.id).includes(query);
     });
 });
 
 const selectedPatient = computed(() => {
-    return rawPatients.value.find(p => p.id === selectedPatientId.value)
-})
+    let source = patientStore.patients?.data || patientStore.patients || [];
+    return source.find(p => p.id === selectedPatientId.value);
+});
 
-const patientPrescriptions = computed(() => prescriptionStore.prescriptions)
+const patientPrescriptions = computed(() => prescriptionStore.prescriptions);
 
-// --- Méthodes de Gestion de Lignes Locales ---
+// --- Méthodes ---
 function fetchPatientHistory() {
     prescriptionLines.value = [];
     finalNotes.value = '';
     prescriptionStore.clearMessages(); 
-
     if (selectedPatientId.value) {
-        prescriptionStore.fetchPatientPrescriptions(selectedPatientId.value)
+        prescriptionStore.fetchPatientPrescriptions(selectedPatientId.value);
     }
 }
 
 function addLocalLine() {
-    const isMedicationValid = !!newLine.value.medicationName && newLine.value.medicationName.trim() !== '';
-    const isDosageValid = !!newLine.value.dosage && newLine.value.dosage.trim() !== '';
-    const isFrequencyValid = !!newLine.value.frequency && newLine.value.frequency.trim() !== '';
-    const isDurationValid = !!newLine.value.duration && newLine.value.duration.trim() !== '';
-
-    if (!isMedicationValid || !isDosageValid || !isFrequencyValid || !isDurationValid) {
-        alert('ATTENTION : Veuillez remplir le nom du médicament, la posologie, la fréquence et la durée.');
-        return
+    if (!newLine.value.medicationName || !newLine.value.dosage || !newLine.value.frequency || !newLine.value.duration) {
+        alert('Veuillez remplir tous les champs obligatoires (*)');
+        return;
     }
 
-    const lineToAdd = { 
-        medicationName: newLine.value.medicationName.trim(), 
-        dosage: newLine.value.dosage.trim(),
-        frequency: newLine.value.frequency.trim(),
-        duration: newLine.value.duration.trim(),
-        instructions: newLine.value.instructions ? newLine.value.instructions.trim() : '', 
-    };
-    
-    prescriptionLines.value.push(lineToAdd);
-
-    newLine.value = { medicationName: '', dosage: '', frequency: '', duration: '', instructions: '' }
+    prescriptionLines.value.push({ ...newLine.value });
+    // Reset du formulaire de ligne
+    newLine.value = { medicationName: '', dosage: '', frequency: '', duration: '', instructions: '' };
 }
 
 function removeLocalLine(index) {
     prescriptionLines.value.splice(index, 1);
 }
 
-// --- Méthode Principale : Création et Envoi Final ---
 async function createOrdonnanceAndFinalize() {
-    // 1. Validation de base
-    if (!selectedPatientId.value) {
-        prescriptionStore.setError("Veuillez d'abord sélectionner un patient.")
-        return
-    }
-    if (prescriptionLines.value.length === 0) {
-        prescriptionStore.setError('Veuillez ajouter au moins une ligne de médicament avant de finaliser.')
-        return
-    }
-    
-    // 🚨 CORRECTION : Utilisation de l'ID du docteur depuis l'URL
     const currentDoctorId = doctorIdFromRoute.value;
 
-    if (!currentDoctorId) {
-        prescriptionStore.setError("Impossible de finaliser : L'ID du Docteur est introuvable dans l'URL. Veuillez vérifier la configuration de votre route et recharger la page.");
-        console.error("Erreur de Finalisation: doctor_id est manquant dans l'URL.");
-        return; 
+    if (!currentDoctorId || !selectedPatientId.value) {
+        prescriptionStore.setError("Données manquantes (Docteur ou Patient).");
+        return;
     }
-    
-    console.log(`📋 Envoi de la prescription: doctor_id (depuis l'URL) utilisé est -> ${currentDoctorId}`);
 
-    // 2. Construction du Payload - CORRECTION : 'prescription_lines' au lieu de 'lines'
-    const payloadLines = prescriptionLines.value.map(line => ({
-        medication_name: line.medicationName, 
-        dosage: line.dosage,
-        frequency: line.frequency,
-        duration: line.duration,
-        instructions: line.instructions || null,
-    }));
-
-    const prescriptionData = { 
-        prescription_lines: payloadLines, // 🚨 CORRIGÉ : 'prescription_lines' au lieu de 'lines'
+    // Mapping vers le format attendu par l'API (prescription_lines)
+    const payload = {
         notes: finalNotes.value,
-    }
+        prescription_lines: prescriptionLines.value.map(line => ({
+            medicament_name: line.medicationName, // Attention : vérifier si l'API attend medicament_name ou medication_name
+            dosage: line.dosage,
+            frequency: line.frequency,
+            duration: line.duration,
+            instructions: line.instructions || null
+        }))
+    };
+
+    const success = await prescriptionStore.createPrescription(currentDoctorId, selectedPatientId.value, payload);
     
-    console.log('📦 Données envoyées:', prescriptionData);
-    
-    // 3. Appel au Store
-    const responseData = await prescriptionStore.createPrescription(currentDoctorId, selectedPatientId.value, prescriptionData)
-    
-    // 4. Traitement après succès/échec
-    if (responseData && responseData.success) {
-        prescriptionLines.value = []
-        finalNotes.value = ''
-        prescriptionStore.setSuccess("L'ordonnance a été enregistrée avec succès. Le brouillon est réinitialisé.");
-        fetchPatientHistory() 
+    if (success) {
+        prescriptionLines.value = [];
+        finalNotes.value = '';
+        fetchPatientHistory(); // Rafraîchir l'historique en bas
     }
 }
 
-// --- Utilitaires ---
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+const formatDate = (date) => date ? new Date(date).toLocaleDateString('fr-FR') : 'N/A';
 
 const getStatusClass = (status) => {
-    if (status === 'active') return 'status-active';
-    if (status === 'draft' || status === 'pending') return 'status-draft';
-    if (status === 'expired' || status === 'inactive') return 'status-inactive';
-    return 'status-default';
+    const s = status?.toLowerCase();
+    if (s === 'active') return 'status-active';
+    if (['draft', 'pending'].includes(s)) return 'status-draft';
+    return 'status-inactive';
 }
 
 onMounted(() => {
@@ -326,35 +267,44 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.ordonnances-page { padding: 32px; background-color: #f8f9fa; }
-.title { font-size: 28px; color: #002580; margin-bottom: 24px; }
-.section { margin-top: 28px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
-.patient-selection-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: end; }
-label { display: block; margin-top: 12px; font-weight: 600; color: #333; }
-.search-input, .select-patient, textarea, input { width: 100%; padding: 10px; margin-top: 6px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
-.prescription-form-container { padding: 30px; }
-.new-line-form { border: 1px dashed #0040d0; padding: 20px; margin-top: 20px; border-radius: 6px; background-color: #f7fbff; }
-.new-line-form h3 { margin-top: 0; color: #0040d0; }
-.current-lines { margin-top: 20px; padding: 20px 0; border-top: 1px solid #ddd;}
-.current-lines h3 { color: #002580; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-.lines-list { list-style: none; padding: 0; margin-bottom: 20px; }
-.line-item { display: flex; justify-content: space-between; align-items: center; background-color: #eaf0ff; border-left: 5px solid #0040d0; padding: 10px; margin-bottom: 8px; border-radius: 4px; }
-.line-text strong { color: #002580; }
-.empty-line { font-style: italic; color: #888; }
-.btn-remove { background: #ff4d4f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
-.btn-add-line { margin-top: 16px; padding: 10px 16px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
-.finalization-area { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
-.btn-submit { padding: 12px 16px; background-color: #002580; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; transition: background-color 0.2s; }
-.btn-submit:disabled { background-color: #a0a0a0; cursor: not-allowed; }
-.ordonnances-table { width: 100%; margin-top: 12px; border-collapse: collapse; }
-.ordonnances-table th, .ordonnances-table td { border: 1px solid #e1e7f3; padding: 10px; text-align: left; }
-.ordonnances-table th { background-color: #002580; color: white; }
-.message-success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; margin-top: 10px; border-radius: 4px; }
-.message-error, .small-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; margin-top: 10px; border-radius: 4px; }
-.small-error { font-size: 0.85em; padding: 5px 10px; margin-top: 5px; }
-.info-text { font-style: italic; color: #6c757d; }
-.status-active { color: green; font-weight: bold; }
-.status-draft { color: orange; font-weight: bold; }
-.status-inactive, .status-expired { color: red; font-weight: bold; }
-.status-default { color: #444; }
+.ordonnances-page { max-width: 1000px; margin: 0 auto; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+.title { color: #1c325f; border-bottom: 3px solid #0040d0; padding-bottom: 10px; margin-bottom: 30px; }
+
+.section { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+.patient-selection-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #eef2ff; }
+.patient-highlight { color: #0040d0; text-decoration: underline; }
+
+.new-line-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
+.grid-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.full { grid-column: span 2; }
+
+label { font-weight: 600; color: #475569; font-size: 0.9rem; margin-bottom: 5px; display: block; }
+input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; transition: border 0.2s; }
+input:focus { border-color: #0040d0; outline: none; }
+
+.btn-add-line { grid-column: span 2; background: #059669; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.btn-add-line:hover { background: #047857; }
+
+.line-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 5px solid #0040d0; }
+.line-instructions { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
+.btn-remove { background: #ef4444; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+
+.btn-submit { width: 100%; background: #1c325f; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+.btn-submit:hover:not(:disabled) { background: #0040d0; transform: translateY(-2px); }
+.btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+
+.message-success { background: #dcfce7; color: #166534; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bbf7d0; }
+.message-error { background: #fee2e2; color: #991b1b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #fecaca; }
+
+.ordonnances-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+.ordonnances-table th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 0.9rem; }
+.ordonnances-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+
+.status-active { color: #059669; font-weight: bold; }
+.status-draft { color: #d97706; }
+.status-inactive { color: #94a3b8; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

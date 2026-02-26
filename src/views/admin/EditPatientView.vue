@@ -1,11 +1,16 @@
 <template>
   <AdminLayout>
     <div class="edit-patient-container">
-      <h2>Modifier un Patient</h2>
+      <div class="header-section">
+        <button @click="router.push({ name: 'Patient' })" class="back-circle-btn" title="Retour à la liste">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+        <h2>Modifier le Dossier Patient</h2>
+      </div>
 
-      <div v-if="patientStore.isLoading">Chargement des données du patient...</div>
-      <div v-if="patientStore.error" class="error-message">{{ patientStore.error }}</div>
-      <div v-if="patientStore.success" class="success-message">{{ patientStore.success }}</div>
+      <div v-if="patientStore.isLoading" class="state-loader">Chargement...</div>
+      <div v-if="patientStore.error" class="message error-message">{{ patientStore.error }}</div>
+      <div v-if="patientStore.success" class="message success-message">{{ patientStore.success }}</div>
 
       <form
         @submit.prevent="submitForm"
@@ -15,114 +20,121 @@
         <fieldset>
           <legend>Informations personnelles</legend>
           <div class="form-row">
-            <input v-model="form.first_name" type="text" placeholder="Prénom" required />
-            <input v-model="form.last_name" type="text" placeholder="Nom" required />
+            <div class="input-group">
+              <label>Prénom</label>
+              <input v-model="form.first_name" type="text" required />
+            </div>
+            <div class="input-group">
+              <label>Nom</label>
+              <input v-model="form.last_name" type="text" required />
+            </div>
           </div>
           <div class="form-row">
-            <input v-model="form.birth_date" type="date" placeholder="Date de naissance" />
-            <input v-model="form.phone" type="text" placeholder="Téléphone" />
+            <div class="input-group">
+              <label>Date de naissance</label>
+              <input v-model="form.birth_date" type="date" />
+            </div>
+            <div class="input-group">
+              <label>Téléphone</label>
+              <input v-model="form.phone" type="text" />
+            </div>
           </div>
           <div class="form-row">
-            <input v-model="form.email" type="email" placeholder="Adresse email" required />
-            <input v-model="form.password" type="password" placeholder="Nouveau mot de passe (laisser vide pour ne pas changer)" />
+            <div class="input-group">
+              <label>Email</label>
+              <input v-model="form.email" type="email" required />
+            </div>
+            <div class="input-group">
+              <label>Nouveau mot de passe</label>
+              <input v-model="form.password" type="password" placeholder="Laisser vide pour garder l'ancien" />
+            </div>
           </div>
           <div class="form-row">
-            <input v-model="form.city" type="text" placeholder="Ville" />
-            <input v-model="form.country" type="text" placeholder="Pays" />
+            <div class="input-group">
+              <label>Ville</label>
+              <input v-model="form.city" type="text" />
+            </div>
+            <div class="input-group">
+              <label>Pays</label>
+              <input v-model="form.country" type="text" />
+            </div>
           </div>
-          <div class="form-row">
-            <input v-model="form.address" type="text" placeholder="Adresse" />
+          <div class="form-row full-width">
+            <label>Adresse</label>
+            <input v-model="form.address" type="text" />
           </div>
-          <div class="form-row">
-            <label for="profile_photo">Mettre à jour la photo de profil:</label>
-            <input type="file" id="profile_photo" @change="handleFileUpload" />
+          <div class="form-row full-width">
+            <label>Photo de profil</label>
+            <input type="file" @change="handleFileUpload" accept="image/*" />
           </div>
         </fieldset>
 
         <fieldset>
           <legend>Informations médicales</legend>
-
           <div class="form-row">
-              <label for="patient-status">Statut du patient :</label>
-              <select id="patient-status" v-model="form.status" required>
-                  <option value="" disabled>Sélectionner le statut</option>
-                  <option value="actif">Actif</option>
-                  <option value="en_traitement">En Traitement</option>
-                  <option value="stable">Stable</option>
-                  <option value="critique">Critique</option>
-                  <option value="sorti">Sorti</option>
-                  <option value="archive">Archivé</option>
+            <div class="input-group">
+              <label>Statut</label>
+              <select v-model="form.status" required>
+                <option value="actif">Actif</option>
+                <option value="en_traitement">En Traitement</option>
+                <option value="stable">Stable</option>
+                <option value="critique">Critique</option>
+                <option value="sorti">Sorti</option>
+                <option value="archive">Archivé</option>
               </select>
+            </div>
+            <div class="input-group">
+              <label>Dernière consultation</label>
+              <input type="date" v-model="form.last_consultation_date" />
+            </div>
           </div>
 
           <div class="form-row">
-              <label for="last_consultation_date">Date de dernière consultation :</label>
-              <input type="date" id="last_consultation_date" v-model="form.last_consultation_date" />
+            <div class="input-group">
+              <label>Hôpital</label>
+              <select v-model="form.hospital_id" :disabled="hospitalStore.loading">
+                <option :value="null">Sélectionner un hôpital</option>
+                <option v-for="h in hospitalStore.hospitals" :key="h.id" :value="h.id">{{ h.nom }}</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Médecin référent</label>
+              <select v-model="form.doctor_id" :disabled="doctorStore.loading">
+                <option :value="null">Sélectionner un médecin</option>
+                <option v-for="d in doctorStore.doctors" :key="d.id" :value="d.id">
+                  {{ d.user?.last_name }} ({{ d.speciality || 'Généraliste' }})
+                </option>
+              </select>
+            </div>
           </div>
 
           <div class="form-row">
-            <input v-model="form.genre" type="text" placeholder="Genre" />
-            <input v-model="form.group_sanguine" type="text" placeholder="Groupe sanguin" />
-          </div>
-          <div class="form-row">
-            <input v-model="form.telephone_urgence" type="text" placeholder="Téléphone d'urgence" />
-            <input v-model="form.numero_urgence" type="text" placeholder="Numéro d'urgence" />
-          </div>
-          <div class="form-row">
-            <input v-model="form.poids" type="number" placeholder="Poids (kg)" />
-            <input v-model="form.taille" type="number" placeholder="Taille (m)" step="0.01" />
-          </div>
-          <div class="form-row">
-            <input v-model="form.maladies_chroniques" type="text" placeholder="Maladies chroniques" />
-            <input v-model="form.assurance_maladie" type="text" placeholder="Assurance maladie" />
-          </div>
-
-          <div class="form-row">
-            <label for="hospital-select">Hôpital :</label>
-            <select id="hospital-select" v-model="form.hospital_id" :disabled="hospitalStore.loading">
-              <option :value="null" disabled>Sélectionner un hôpital</option>
-              <option v-if="hospitalStore.loading" disabled>Chargement des hôpitaux...</option>
-              <option v-else-if="hospitalStore.error" disabled>Erreur de chargement</option>
-              <option
-                v-else
-                v-for="hospital in hospitalStore.hospitals" :key="hospital.id"
-                :value="hospital.id"
-              >
-                {{ hospital.nom }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <label for="doctor-select">Médecin référent :</label>
-            <select id="doctor-select" v-model="form.doctor_id" :disabled="doctorStore.loading">
-              <option :value="null" disabled>Sélectionner un médecin</option>
-              <option v-if="doctorStore.loading" disabled>Chargement des médecins...</option>
-              <option v-else-if="doctorStore.error" disabled>Erreur de chargement</option>
-              <option
-                v-else
-                v-for="doctor in doctorStore.doctors"  :key="doctor.id"
-                :value="doctor.id"
-              >
-                {{ doctor.user?.first_name }} {{ doctor.user?.last_name }} ({{ doctor.speciality || 'N/A' }})
-              </option>
-            </select>
+            <div class="input-group">
+              <label>Poids (kg)</label>
+              <input v-model="form.poids" type="number" />
+            </div>
+            <div class="input-group">
+              <label>Taille (m)</label>
+              <input v-model="form.taille" type="number" step="0.01" />
+            </div>
           </div>
         </fieldset>
 
-        <button type="submit" class="submit-btn" :disabled="patientStore.isLoading">
-          Modifier le patient
-        </button>
+        <div class="form-actions">
+          <button type="button" @click="router.push({ name: 'Patient' })" class="cancel-btn">
+            Annuler
+          </button>
+          <button type="submit" class="submit-btn" :disabled="patientStore.isLoading">
+            Enregistrer les modifications
+          </button>
+        </div>
       </form>
-
-      <div v-else-if="!patientStore.isLoading && !patientStore.currentPatient && !patientStore.error">
-        Patient non trouvé ou données manquantes.
-      </div>
     </div>
   </AdminLayout>
 </template>
 
 <script setup>
+/* Logique JS identique à ton code précédent (pas de changement nécessaire ici) */
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -143,13 +155,7 @@ const form = reactive({
   city: '', profile_photo: null, address: '', email: '', password: '',
   genre: '', group_sanguine: '', telephone_urgence: '', maladies_chroniques: '',
   assurance_maladie: '', numero_urgence: '', poids: '', taille: '',
-  doctor_id: null,
-  hospital_id: null,
-
-  // AJOUT DES NOUVEAUX ATTRIBUTS
-  status: '',
-  last_consultation_date: '',
-
+  doctor_id: null, hospital_id: null, status: '', last_consultation_date: '',
   patient_id_ref: null
 })
 
@@ -160,10 +166,6 @@ const handleFileUpload = (e) => {
 
 const fillFormWithPatientData = (patientData) => {
   if (!patientData) return
-
-  console.log("📦 Données patient reçues (pour remplissage) :", JSON.parse(JSON.stringify(patientData)))
-
-
   form.first_name = patientData.user?.first_name || ''
   form.last_name = patientData.user?.last_name || ''
   form.birth_date = patientData.user?.birth_date || ''
@@ -172,7 +174,6 @@ const fillFormWithPatientData = (patientData) => {
   form.city = patientData.user?.city || ''
   form.address = patientData.user?.address || ''
   form.email = patientData.user?.email || ''
-
   form.genre = patientData.genre || ''
   form.group_sanguine = patientData.group_sanguine || ''
   form.telephone_urgence = patientData.telephone_urgence || ''
@@ -181,74 +182,28 @@ const fillFormWithPatientData = (patientData) => {
   form.numero_urgence = patientData.numero_urgence || ''
   form.poids = patientData.poids || ''
   form.taille = patientData.taille || ''
-
-  // 🔑 LIGNE CORRIGÉE/AJOUTÉE : Remplissage de la date de dernière consultation
   form.status = patientData.status || ''
   form.last_consultation_date = patientData.last_consultation_date || ''
-
-
-  // Remplissage des IDs (si elles proviennent de medicalRecord ou directement du patient)
-  form.doctor_id = patientData.medicalRecord?.doctor_id
-    ? Number(patientData.medicalRecord.doctor_id)
-    : patientData.doctor_id // Fallback au cas où l'ID est directement sur l'objet patient
-    ? Number(patientData.doctor_id)
-    : null;
-
-  form.hospital_id = patientData.medicalRecord?.hospital_id
-    ? Number(patientData.medicalRecord.hospital_id)
-    : patientData.hospital_id // Fallback
-    ? Number(patientData.hospital_id)
-    : null;
-
+  form.doctor_id = patientData.medicalRecord?.doctor_id ? Number(patientData.medicalRecord.doctor_id) : (patientData.doctor_id ? Number(patientData.doctor_id) : null);
+  form.hospital_id = patientData.medicalRecord?.hospital_id ? Number(patientData.medicalRecord.hospital_id) : (patientData.hospital_id ? Number(patientData.hospital_id) : null);
   form.patient_id_ref = patientData.id
   form.password = ''
 }
 
 const submitForm = async () => {
   const formData = new FormData()
-
-  // 1. Validation de base pour l'ENUM
-  if (!form.status) {
-    alert("Veuillez sélectionner le statut du patient.")
-    return
-  }
-
-  // 2. Construction du FormData
+  if (!form.status) { alert("Sélectionner le statut."); return; }
   for (const key in form) {
-    const value = form[key]
-    if (key === 'patient_id_ref') continue
-    if (key === 'password' && !value) continue
-
-    // Gestion du fichier de profil
-    if (key === 'profile_photo') {
-        if (value instanceof File) {
-            formData.append(key, value)
-        }
-        // Pour la mise à jour, on n'envoie 'profile_photo' que si c'est un nouveau fichier.
-        // Sinon, le backend conservera l'ancienne.
-        continue;
-    }
-
-    // Ajout de tous les autres champs qui ne sont pas null ou vides
-    if (value !== null && value !== '') {
-      formData.append(key, value)
-    }
+    if (key === 'patient_id_ref' || (key === 'password' && !form[key])) continue
+    if (key === 'profile_photo') { if (form[key] instanceof File) formData.append(key, form[key]); continue; }
+    if (form[key] !== null && form[key] !== '') formData.append(key, form[key])
   }
-
-  // 3. Spécifier la méthode PUT pour la mise à jour
   formData.append('_method', 'PUT')
-
-  console.log("🚀 Données du formulaire avant envoi:", JSON.parse(JSON.stringify(form)))
-
   const success = await patientStore.updatePatient(patientId, formData)
-  if (success) {
-    setTimeout(() => { router.push({ name: 'Patient' }) }, 2000)
-  }
+  if (success) { setTimeout(() => { router.push({ name: 'Patient' }) }, 2000) }
 }
 
-watch(() => patientStore.currentPatient, (newPatient) => {
-  fillFormWithPatientData(newPatient)
-}, { immediate: true })
+watch(() => patientStore.currentPatient, (newPatient) => { fillFormWithPatientData(newPatient) }, { immediate: true })
 
 onMounted(async () => {
   await patientStore.onePatient(patientId)
@@ -257,19 +212,35 @@ onMounted(async () => {
 })
 </script>
 
-
 <style scoped>
-/* Vos styles ici, pas de changements majeurs */
-.edit-patient-container { max-width: 900px; margin: auto; padding: 30px; background: #ffffff; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
-h2 { margin-bottom: 20px; color: #0040d0; }
-.patient-form { display: flex; flex-direction: column; gap: 24px; }
-fieldset { border: 1px solid #ccc; border-radius: 10px; padding: 20px; }
-legend { font-weight: bold; color: #002580; padding: 0 10px; }
-.form-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; }
-input, select, textarea { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-textarea { width: 100%; height: 100px; resize: vertical; }
-.submit-btn { align-self: flex-end; background-color: #0040d0; color: white; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-.submit-btn:hover { background-color: #002fa1; }
-.error-message { color: red; margin-bottom: 15px; padding: 10px; background-color: #ffe0e0; border: 1px solid red; border-radius: 5px; }
-.success-message { color: green; margin-bottom: 15px; padding: 10px; background-color: #e0ffe0; border: 1px solid green; border-radius: 5px; }
+.edit-patient-container { max-width: 900px; margin: 2rem auto; padding: 2rem; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+/* Header & Back Button */
+.header-section { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+.back-circle-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #ddd; background: white; cursor: pointer; transition: 0.2s; color: #555; }
+.back-circle-btn:hover { background: #f5f5f5; color: #0040d0; border-color: #0040d0; }
+h2 { color: #0040d0; margin: 0; font-size: 1.5rem; }
+
+/* Form Layout */
+.patient-form { display: flex; flex-direction: column; gap: 2rem; }
+fieldset { border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; background: #fcfcfc; }
+legend { font-weight: bold; color: #333; padding: 0 10px; }
+.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.input-group { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 0.4rem; }
+.full-width { flex-direction: column; width: 100%; }
+
+label { font-size: 0.85rem; font-weight: 600; color: #666; }
+input, select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; width: 100%; }
+input:focus { border-color: #0040d0; outline: none; box-shadow: 0 0 0 2px rgba(0,64,208,0.1); }
+
+/* Actions */
+.form-actions { display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid #eee; padding-top: 1.5rem; }
+.submit-btn { background: #0040d0; color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.submit-btn:hover { background: #002fa1; }
+.cancel-btn { background: #edf2f7; color: #4a5568; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.cancel-btn:hover { background: #e2e8f0; }
+
+.message { padding: 10px; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
+.error-message { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+.success-message { background: #f0fff4; color: #2f855a; border: 1px solid #9ae6b4; }
 </style>

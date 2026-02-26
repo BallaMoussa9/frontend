@@ -1,76 +1,117 @@
 <template>
   <AdminLayout>
-    <div class="form-container">
-      <h2>Modifier le Médecin Urgentiste</h2>
+    <div class="form-container-wrapper">
+      <header class="header-section">
+        <button @click="router.back()" class="btn-back" title="Retour">
+          <span class="arrow">←</span>
+        </button>
+        <div class="header-text">
+          <h2>Modifier le Médecin Urgentiste</h2>
+          <p class="subtitle" v-if="urgentistStore.currentUrgentist">
+            Édition du profil de Dr. {{ urgentistStore.currentUrgentist.user?.first_name }} {{ urgentistStore.currentUrgentist.user?.last_name }}
+          </p>
+        </div>
+      </header>
 
-      <div v-if="urgentistStore.loading" class="loading-message">Chargement...</div>
-      <div v-if="urgentistStore.error && typeof urgentistStore.error === 'string'" class="error-message">
-        {{ urgentistStore.error }}
+      <div class="feedback-area">
+        <div v-if="urgentistStore.loading" class="state-msg loading">
+          <div class="mini-spinner"></div> Chargement des données...
+        </div>
+        <div v-if="urgentistStore.error && typeof urgentistStore.error === 'string'" class="state-msg error">
+          ⚠️ {{ urgentistStore.error }}
+        </div>
+        <div v-if="urgentistStore.success" class="state-msg success">
+          ✅ {{ urgentistStore.success }}
+        </div>
       </div>
-      <div v-if="urgentistStore.success" class="success-message">{{ urgentistStore.success }}</div>
 
-      <form @submit.prevent="submit" v-if="!urgentistStore.loading && urgentistStore.currentUrgentist">
-        <fieldset>
-          <legend>Infos générales</legend>
-          <div class="row">
-            <div class="field">
-              <input v-model="form.first_name" placeholder="Prénom" />
-              <span v-if="errors.first_name" class="error-message">{{ errors.first_name[0] }}</span>
+      <form 
+        @submit.prevent="submit" 
+        v-if="!urgentistStore.loading && urgentistStore.currentUrgentist"
+        class="edit-urgentist-form"
+      >
+        <div class="form-card">
+          <fieldset class="form-section">
+            <legend>Informations Personnelles</legend>
+            <div class="form-grid">
+              <div class="field-group">
+                <label>Prénom</label>
+                <input v-model="form.first_name" type="text" placeholder="Prénom" />
+                <span v-if="errors.first_name" class="error-text">{{ errors.first_name[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Nom</label>
+                <input v-model="form.last_name" type="text" placeholder="Nom" />
+                <span v-if="errors.last_name" class="error-text">{{ errors.last_name[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Email professionnel</label>
+                <input v-model="form.email" type="email" placeholder="email@exemple.com" />
+                <span v-if="errors.email" class="error-text">{{ errors.email[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Téléphone</label>
+                <input v-model="form.phone" type="text" placeholder="Numéro de téléphone" />
+                <span v-if="errors.phone" class="error-text">{{ errors.phone[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Ville</label>
+                <input v-model="form.city" type="text" placeholder="Ville" />
+              </div>
+              <div class="field-group">
+                <label>Pays</label>
+                <input v-model="form.country" type="text" placeholder="Pays" />
+              </div>
             </div>
-            <div class="field">
-              <input v-model="form.last_name" placeholder="Nom" />
-              <span v-if="errors.last_name" class="error-message">{{ errors.last_name[0] }}</span>
+          </fieldset>
+
+          <fieldset class="form-section spacing-top">
+            <legend>Informations Professionnelles</legend>
+            <div class="form-grid">
+              <div class="field-group">
+                <label>Spécialité</label>
+                <input v-model="form.speciality" type="text" placeholder="Ex: Traumatologie" />
+                <span v-if="errors.speciality" class="error-text">{{ errors.speciality[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Localisation (Service/Bloc)</label>
+                <input v-model="form.location" type="text" placeholder="Ex: Aile Nord, Box 4" />
+              </div>
+              <div class="field-group">
+                <label>Statut de disponibilité</label>
+                <select v-model="form.status">
+                  <option value="available">🟢 Disponible</option>
+                  <option value="on_duty">🟡 En service</option>
+                  <option value="off_duty">⚪ Hors service</option>
+                  <option value="suspended">🔴 Suspendu</option>
+                </select>
+                <span v-if="errors.status" class="error-text">{{ errors.status[0] }}</span>
+              </div>
+              <div class="field-group">
+                <label>Photo de profil (Optionnel)</label>
+                <div class="file-upload">
+                  <input type="file" @change="handlePhoto" id="photo-upload" accept="image/*" />
+                  <label for="photo-upload" class="file-label">
+                    {{ form.profile_photo ? 'Fichier sélectionné' : 'Changer la photo' }}
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
+          </fieldset>
+        </div>
 
-          <div class="row">
-            <div class="field">
-              <input v-model="form.email" type="email" placeholder="Email" />
-              <span v-if="errors.email" class="error-message">{{ errors.email[0] }}</span>
-            </div>
-            <div class="field">
-              <input v-model="form.phone" placeholder="Téléphone" />
-              <span v-if="errors.phone" class="error-message">{{ errors.phone[0] }}</span>
-            </div>
-          </div>
-
-          <div class="row">
-            <input v-model="form.city" placeholder="Ville" />
-            <input v-model="form.country" placeholder="Pays" />
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Infos médicales</legend>
-          <div class="row">
-            <div class="field">
-              <input v-model="form.speciality" placeholder="Spécialité" />
-              <span v-if="errors.speciality" class="error-message">{{ errors.speciality[0] }}</span>
-            </div>
-            <div class="field">
-              <input v-model="form.location" placeholder="Localisation" />
-            </div>
-          </div>
-
-          <div class="row">
-            <label>Statut :</label>
-            <select v-model="form.status">
-              <option value="available">Disponible</option>
-              <option value="on_duty">En service</option>
-              <option value="off_duty">Hors service</option>
-              <option value="suspended">Suspendu</option>
-            </select>
-            <span v-if="errors.status" class="error-message">{{ errors.status[0] }}</span>
-          </div>
-
-          <input type="file" @change="handlePhoto" />
-        </fieldset>
-
-        <button class="submit" :disabled="urgentistStore.loading">Modifier</button>
+        <div class="form-actions">
+          <button type="button" @click="router.back()" class="btn-cancel">Annuler</button>
+          <button type="submit" class="submit" :disabled="urgentistStore.loading">
+            <span v-if="urgentistStore.loading" class="mini-spinner-white"></span>
+            Enregistrer les modifications
+          </button>
+        </div>
       </form>
     </div>
   </AdminLayout>
 </template>
+
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { reactive, ref, onMounted, watch } from 'vue'
@@ -81,7 +122,6 @@ const route = useRoute()
 const router = useRouter()
 const urgentistStore = useUrgentistStore()
 
-// ✅ formulaire réactif
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -95,79 +135,122 @@ const form = reactive({
   status: 'available'
 })
 
-// ✅ erreurs backend
 const errors = ref({})
 
-// gestion du fichier
 const handlePhoto = (e) => {
   form.profile_photo = e.target.files[0]
 }
 
-// soumission du formulaire
 const submit = async () => {
   errors.value = {}
-
   const data = new FormData()
+  
   Object.keys(form).forEach(k => {
     if (form[k] !== null && form[k] !== '') {
       data.append(k, form[k])
     }
   })
+  // Pour Laravel/Symfony, on simule un PUT via POST avec _method
   data.append('_method', 'PUT')
 
   try {
     await urgentistStore.updateUrgentist(route.params.id, data)
 
-    // Vérifier si l'erreur est un objet (erreurs de validation)
     if (urgentistStore.error && typeof urgentistStore.error === 'object') {
       errors.value = urgentistStore.error.errors || {}
     } else if (!urgentistStore.error) {
-      // Rediriger vers la liste après succès
+      alert('Profil mis à jour avec succès !')
       router.push({ name: 'Urgence' })
     }
   } catch (error) {
-    console.error('❌ Erreur lors de la mise à jour:', error)
-    // S'il y a une erreur jetée par handleAction, la gérer ici
-    if (error.errors) {
-        errors.value = error.errors;
-    }
+    if (error.errors) errors.value = error.errors;
   }
 }
 
-// récupère l'urgentiste au montage
 onMounted(() => {
-  // 🔑 CORRECTION DE L'ERREUR : Utilisation de l'action correcte du store
   urgentistStore.fetchUrgentist(route.params.id) 
 })
 
-// met à jour le form quand l’urgentiste est chargé
 watch(() => urgentistStore.currentUrgentist, (newUrgentist) => {
   if (newUrgentist && newUrgentist.user) {
     Object.assign(form, {
-      first_name: newUrgentist.user.first_name ?? form.first_name,
-      last_name: newUrgentist.user.last_name ?? form.last_name,
-      email: newUrgentist.user.email ?? form.email,
-      phone: newUrgentist.user.phone ?? form.phone,
-      city: newUrgentist.user.city ?? form.city,
-      country: newUrgentist.user.country ?? form.country,
-      speciality: newUrgentist.speciality ?? form.speciality,
-      location: newUrgentist.location ?? form.location,
-      status: newUrgentist.status ?? form.status,
+      first_name: newUrgentist.user.first_name ?? '',
+      last_name: newUrgentist.user.last_name ?? '',
+      email: newUrgentist.user.email ?? '',
+      phone: newUrgentist.user.phone ?? '',
+      city: newUrgentist.user.city ?? '',
+      country: newUrgentist.user.country ?? '',
+      speciality: newUrgentist.speciality ?? '',
+      location: newUrgentist.location ?? '',
+      status: newUrgentist.status ?? 'available',
     })
   }
 }, { immediate: true })
 </script>
 
-
 <style scoped>
 @import './FormStyle.css';
 
-.loading-message { color: #0040d0; margin-bottom: 10px; }
-.error-message { color: #d9534f; margin-bottom: 6px; font-size: 14px; display: block; }
-.success-message { color: #5cb85c; margin-bottom: 10px; }
+.form-container-wrapper { max-width: 900px; margin: 0 auto; padding: 30px; }
 
-.row { display: flex; gap: 16px; margin-bottom: 16px; }
-.field { flex: 1; display: flex; flex-direction: column; }
-input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
-.submit { background-color: #0040d0; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+/* Header & Retour */
+.header-section { display: flex; align-items: center; gap: 20px; margin-bottom: 25px; }
+.btn-back {
+  width: 42px; height: 42px; border-radius: 12px; border: 1px solid #e2e8f0;
+  background: white; cursor: pointer; transition: 0.2s; color: #64748b;
+}
+.btn-back:hover { background: #f1f5f9; transform: translateX(-3px); color: #0040d0; }
+.header-text h2 { margin: 0; font-size: 24px; color: #1e293b; font-weight: 800; }
+.subtitle { margin: 0; color: #64748b; font-size: 14px; }
+
+/* Feedback Messages */
+.state-msg { padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.loading { background: #eff6ff; color: #2563eb; }
+.error { background: #fef2f2; color: #dc2626; }
+.success { background: #f0fdf4; color: #16a34a; }
+
+/* Form Card */
+.form-card {
+  background: white; padding: 35px; border-radius: 20px;
+  border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.form-section { border: none; padding: 0; margin: 0; }
+.form-section legend { font-weight: 800; color: #1e293b; font-size: 16px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f8fafc; width: 100%; }
+.spacing-top { margin-top: 40px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.field-group { display: flex; flex-direction: column; gap: 8px; }
+.field-group label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+input, select {
+  padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px;
+  background: #f8fafc; transition: 0.2s; font-size: 14px;
+}
+input:focus, select:focus { border-color: #0040d0; background: white; outline: none; box-shadow: 0 0 0 4px rgba(0,64,208,0.05); }
+
+.error-text { color: #dc2626; font-size: 12px; font-weight: 600; margin-top: 4px; }
+
+/* File Upload */
+.file-upload { position: relative; }
+#photo-upload { opacity: 0; position: absolute; z-index: -1; }
+.file-label {
+  display: block; padding: 12px; background: #f1f5f9; border: 1px dashed #cbd5e1;
+  border-radius: 10px; text-align: center; cursor: pointer; color: #64748b; font-weight: 600;
+}
+
+/* Actions */
+.form-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
+.submit {
+  background: #0040d0; color: white; border: none; padding: 12px 25px;
+  border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  display: flex; align-items: center; gap: 10px;
+}
+.submit:hover { background: #0035b0; transform: translateY(-2px); }
+.btn-cancel { background: white; color: #64748b; border: 1px solid #e2e8f0; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+
+.mini-spinner { width: 16px; height: 16px; border: 2px solid #2563eb; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+.mini-spinner-white { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

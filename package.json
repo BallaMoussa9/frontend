@@ -17,6 +17,7 @@
     "chart.js": "^4.5.0",
     "dayjs": "^1.11.19",
     "lodash": "^4.17.21",
+    "lucide-vue-next": "^0.564.0",
     "pinia": "^3.0.1",
     "pinia-plugin-persistedstate": "^4.4.1",
     "vue": "^3.5.13",

@@ -1,0 +1,48 @@
+/* Cache le bouton menu sur PC */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: block; /* Apparaît sur mobile */
+        margin-right: 15px;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 64px;
+        left: -100%; /* Caché par défaut à gauche */
+        width: 100%;
+        height: calc(100vh - 64px);
+        background: #00194d;
+        flex-direction: column; /* Aligné verticalement */
+        padding: 40px 20px;
+        transition: 0.3s ease-in-out;
+        z-index: 999;
+    }
+
+    /* Quand on clique sur le bouton, le menu glisse */
+    .nav-links.nav-open {
+        left: 0;
+    }
+
+    .user-info {
+        flex-direction: column;
+        margin-bottom: 30px;
+    }
+
+    .avatar {
+        width: 80px; /* Plus grand sur mobile pour le menu */
+        height: 80px;
+    }
+
+    .main-content {
+        padding: 15px; /* Moins de marge sur mobile */
+    }
+}

@@ -1,81 +1,128 @@
 <template>
   <AdminLayout>
-    <div class="ajouter-medecin-container">
-      <h2>Modifier un Médecin</h2>
+    <div class="modifier-medecin-wrapper">
+      <header class="form-header">
+        <button @click="router.back()" class="btn-back" title="Retour">
+          <span class="arrow">←</span>
+        </button>
+        <div class="header-text">
+          <h2>Modifier un Médecin</h2>
+          <p class="subtitle">Mettez à jour les informations du praticien</p>
+        </div>
+      </header>
 
-      <div v-if="doctorStore.loading">Chargement des données du médecin...</div>
-      <div v-if="doctorStore.error" class="error-message">{{ doctorStore.error }}</div>
-      <div v-if="doctorStore.success" class="success-message">{{ doctorStore.success }}</div>
+      <div v-if="doctorStore.loading" class="state-msg info">
+        <div class="spinner"></div> Chargement des données...
+      </div>
+      <div v-if="doctorStore.error" class="state-msg error">{{ doctorStore.error }}</div>
+      <div v-if="doctorStore.success" class="state-msg success">{{ doctorStore.success }}</div>
 
       <form
         @submit.prevent="submitForm"
         class="medecin-form"
         v-if="!doctorStore.loading && doctorStore.currentDoctor"
       >
-        <fieldset>
+        <fieldset class="form-section">
           <legend>Informations générales</legend>
+          
           <div class="form-row">
-            <input v-model="form.first_name" type="text" placeholder="Prénom" required />
-            <input v-model="form.last_name" type="text" placeholder="Nom" required />
+            <div class="field">
+              <label>Prénom</label>
+              <input v-model="form.first_name" type="text" placeholder="Ex: Jean" required />
+            </div>
+            <div class="field">
+              <label>Nom</label>
+              <input v-model="form.last_name" type="text" placeholder="Ex: Dupont" required />
+            </div>
           </div>
+
           <div class="form-row">
-            <input v-model="form.birth_date" type="date" placeholder="Date de naissance" />
-            <input v-model="form.phone" type="text" placeholder="Téléphone" />
+            <div class="field">
+              <label>Date de naissance</label>
+              <input v-model="form.birth_date" type="date" />
+            </div>
+            <div class="field">
+              <label>Téléphone</label>
+              <input v-model="form.phone" type="text" placeholder="+223 ..." />
+            </div>
           </div>
+
           <div class="form-row">
-            <input v-model="form.email" type="email" placeholder="Adresse email" required />
-            <input v-model="form.password" type="password" placeholder="Nouveau mot de passe (laisser vide pour ne pas changer)" />
+            <div class="field">
+              <label>Email</label>
+              <input v-model="form.email" type="email" placeholder="email@exemple.com" required />
+            </div>
+            <div class="field">
+              <label>Nouveau mot de passe</label>
+              <input v-model="form.password" type="password" placeholder="Laisser vide si inchangé" />
+            </div>
           </div>
+
           <div class="form-row">
-            <input v-model="form.city" type="text" placeholder="Ville" />
-            <input v-model="form.country" type="text" placeholder="Pays" />
+            <div class="field">
+              <label>Ville</label>
+              <input v-model="form.city" type="text" />
+            </div>
+            <div class="field">
+              <label>Département / Hôpital</label>
+              <select v-model="form.department_id">
+                <option disabled value="">-- Sélectionner --</option>
+                <option v-for="dept in departmentStore.departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+            </div>
           </div>
-          <div class="form-row">
-            <input v-model="form.address" type="text" placeholder="Adresse" />
-            <select v-model="form.department_id">
-              <option disabled value="">-- Département --</option>
-              <option
-                v-for="dept in departmentStore.departments"
-                :key="dept.id"
-                :value="dept.id"
-              >
-                {{ dept.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-row">
-            <label for="profile_photo">Photo de profil actuelle:</label>
-            <img
-              v-if="form.profile_photo_url"
-              :src="form.profile_photo_url"
-              alt="Photo de profil actuelle"
-              style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-right: 15px;"
-            />
-            <input type="file" id="profile_photo" @change="handleFileUpload" />
+
+          <div class="field photo-upload">
+            <label>Photo de profil</label>
+            <div class="photo-controls">
+              <img
+                v-if="form.profile_photo_url"
+                :src="form.profile_photo_url"
+                alt="Profil"
+                class="preview-img"
+              />
+              <input type="file" id="profile_photo" @change="handleFileUpload" accept="image/*" />
+            </div>
           </div>
         </fieldset>
 
-        <fieldset>
+        <fieldset class="form-section">
           <legend>Détails professionnels</legend>
           <div class="form-row">
-            <input v-model="form.speciality" type="text" placeholder="Spécialité" />
-            <input v-model="form.numero_ordre" type="text" placeholder="Numéro d’ordre" />
+            <div class="field">
+              <label>Spécialité</label>
+              <input v-model="form.speciality" type="text" placeholder="Ex: Cardiologue" />
+            </div>
+            <div class="field">
+              <label>Numéro d’ordre</label>
+              <input v-model="form.numero_ordre" type="text" />
+            </div>
           </div>
           <div class="form-row">
-            <input v-model="form.numero_professionel" type="text" placeholder="N° professionnel" />
-            <input v-model="form.experience" type="number" placeholder="Expérience (années)" />
+            <div class="field">
+              <label>Expérience (années)</label>
+              <input v-model="form.experience" type="number" />
+            </div>
+            <div class="field">
+              <label>N° professionnel</label>
+              <input v-model="form.numero_professionel" type="text" />
+            </div>
           </div>
-          <textarea v-model="form.biography" placeholder="Biographie"></textarea>
+          <div class="field">
+            <label>Biographie</label>
+            <textarea v-model="form.biography" placeholder="Décrivez le parcours du médecin..."></textarea>
+          </div>
         </fieldset>
 
-        <button type="submit" class="submit-btn" :disabled="doctorStore.loading">
-          Modifier le médecin
-        </button>
+        <div class="form-actions">
+          <button type="button" @click="router.back()" class="cancel-btn">Annuler</button>
+          <button type="submit" class="submit-btn" :disabled="doctorStore.loading">
+            {{ doctorStore.loading ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+          </button>
+        </div>
       </form>
-
-      <div v-else-if="!doctorStore.loading && !doctorStore.currentDoctor && !doctorStore.error">
-        Médecin non trouvé ou données manquantes.
-      </div>
     </div>
   </AdminLayout>
 </template>
@@ -232,94 +279,194 @@ watch(() => doctorStore.currentDoctor, (newDoctor) => {
     }
 }, { immediate: true, deep: true })
 </script>
-
-
 <style scoped>
-.ajouter-medecin-container {
-  max-width: 900px;
-  margin: auto;
-  padding: 30px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-}
-
-h2 {
-  margin-bottom: 20px;
-  color: #0040d0;
-}
-
-.medecin-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-fieldset {
-  border: 1px solid #ccc;
-  border-radius: 10px;
+.modifier-medecin-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-legend {
-  font-weight: bold;
-  color: #002580;
-  padding: 0 10px;
+/* Header & Bouton Retour */
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.btn-back {
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-back:hover {
+  background: #f1f5f9;
+  transform: translateX(-4px);
+}
+
+.header-text h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.subtitle { color: #64748b; margin: 0; font-size: 14px; }
+
+/* Formulaire Design */
+.medecin-form {
+  display: grid;
+  gap: 25px;
+}
+
+.form-section {
+  border: 1px solid #f1f5f9;
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.form-section legend {
+  font-weight: 700;
+  color: #3b82f6;
+  padding: 0 15px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.field {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-input,
-select,
-textarea {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+input, select, textarea {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 14px;
+  transition: border-color 0.2s;
 }
 
-textarea {
-  width: 100%;
-  height: 100px;
-  resize: vertical;
+input:focus, select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+/* Photo */
+.photo-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.preview-img {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Boutons */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 10px;
 }
 
 .submit-btn {
-  align-self: flex-end;
-  background-color: #0040d0;
+  background: #3b82f6;
   color: white;
-  padding: 12px 24px;
+  padding: 14px 28px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
-  font-weight: bold;
+  transition: 0.3s;
 }
 
-.submit-btn:hover {
-  background-color: #002fa1;
+.submit-btn:hover { background: #2563eb; transform: translateY(-2px); }
+
+.cancel-btn {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.error-message {
-  color: red;
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #ffe0e0;
-  border: 1px solid red;
-  border-radius: 5px;
+/* Messages d'état */
+.state-msg {
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-weight: 600;
 }
+.error { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+.success { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
 
-.success-message {
-  color: green;
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #e0ffe0;
-  border: 1px solid green;
-  border-radius: 5px;
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr; /* Une seule colonne sur mobile */
+    gap: 15px;
+  }
+
+  .modifier-medecin-wrapper {
+    padding: 10px;
+  }
+
+  .form-section {
+    padding: 15px;
+  }
+
+  .form-actions {
+    flex-direction: column; /* Boutons l'un sur l'autre */
+  }
+
+  .submit-btn, .cancel-btn {
+    width: 100%;
+  }
+
+  .photo-controls {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>

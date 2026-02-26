@@ -1,8 +1,10 @@
-<!-- src/pages/admin/GererServices.vue -->
 <template>
   <AdminLayout>
     <div class="gerer-services-page">
-      <h2 class="page-title">Gérer les Services</h2>
+      <header class="page-header">
+        <h2 class="page-title">Gérer les Services</h2>
+        <p class="page-subtitle">Sélectionnez un département pour gérer les ressources et le personnel.</p>
+      </header>
 
       <div class="service-grid">
         <div
@@ -11,9 +13,17 @@
           :key="service.id"
           @click="goToService(service.route)"
         >
-          <div class="icon">{{ service.icon }}</div>
-          <h3>{{ service.label }}</h3>
-          <p>{{ service.description }}</p>
+          <div class="card-content">
+            <div class="icon-box">{{ service.icon }}</div>
+            <div class="text-content">
+              <h3>{{ service.label }}</h3>
+              <p>{{ service.description }}</p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="action-text">Accéder</span>
+            <span class="arrow">→</span>
+          </div>
         </div>
       </div>
     </div>
@@ -31,111 +41,122 @@ const goToService = (route) => {
 }
 
 const services = [
-  {
-    id: 1,
-    icon: '👨‍⚕️',
-    label: 'Médecins',
-    route: 'Doctor',
-    description: 'Gérer les comptes et spécialités des médecins',
-  },
-  {
-    id: 2,
-    icon: '💉',
-    label: 'Infirmiers',
-    route: 'Nurse',
-    description: 'Gérer les profils infirmiers et leurs affectations',
-  },
-  {
-    id: 3,
-    icon: '🧪',
-    label: 'Laboratoire',
-    route: 'Laboratoire',
-    description: 'Gérer les techniciens',
-  },
-  {
-    id: 4,
-    icon: '📂',
-    label: 'Dossiers médicaux',
-    route: 'MedicalRecord',
-    description: 'Consulter et valider les dossiers des patients',
-  },
-  {
-    id: 5,
-    icon: '📊',
-    label: 'Rapports médicaux',
-    route: 'MedicalReport',
-    description: 'Suivre les rapports de diagnostic et d’activités',
-  },
-  {
-    id: 6,
-    icon: '🏥',
-    label: 'Départements',
-    route: 'Department',
-    description: 'Créer, modifier ou supprimer un département',
-  },
-  {
-    id: 7,
-    icon: '🆘',
-    label: 'Alertes en temps réel',
-    route: 'Urgence',
-    description: 'Tableau de bord des urgences en direct',
-  },
-  {
-    id: 8,
-    icon: '👥',
-    label: 'Patients',
-    route: 'Patient',
-    description: 'Gestion des profils, RDV et antécédents',
-  },
+  { id: 1, icon: '👨‍⚕️', label: 'Médecins', route: 'Doctor', description: 'Gérer les comptes et spécialités des médecins' },
+  { id: 2, icon: '💉', label: 'Infirmiers', route: 'Nurse', description: 'Gérer les profils infirmiers et leurs affectations' },
+  { id: 3, icon: '🧪', label: 'Laboratoire', route: 'Laboratoire', description: 'Gérer les techniciens et examens' },
+  { id: 4, icon: '📂', label: 'Dossiers médicaux', route: 'MedicalRecord', description: 'Consulter et valider les dossiers patients' },
+  { id: 5, icon: '📊', label: 'Rapports médicaux', route: 'MedicalReport', description: 'Suivre les rapports et activités' },
+  { id: 6, icon: '🏥', label: 'Départements', route: 'Department', description: 'Gérer les unités de l’établissement' },
+  { id: 7, icon: '🆘', label: 'Alertes Urgences', route: 'Urgence', description: 'Tableau de bord des urgences en direct' },
+  { id: 8, icon: '👥', label: 'Patients', route: 'Patient', description: 'Gestion des profils et antécédents' },
 ]
 </script>
 
 <style scoped>
 .gerer-services-page {
-  padding: 32px;
+  padding: 30px;
+  background-color: #f8fafc;
+  min-height: 100%;
+}
+
+.page-header {
+  margin-bottom: 32px;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  color: #002580;
+  font-size: 26px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  color: #64748b;
+  font-size: 15px;
 }
 
 .service-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
 }
 
 .service-card {
   background-color: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   cursor: pointer;
-  transition: transform 0.2s ease;
-  border: 1px solid #ddd;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 .service-card:hover {
-  transform: translateY(-4px);
-  border-color: #0040d0;
+  transform: translateY(-5px);
+  border-color: #3b82f6;
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
 }
 
-.icon {
-  font-size: 32px;
-  margin-bottom: 12px;
+.card-content {
+  padding: 24px;
+}
+
+.icon-box {
+  width: 54px;
+  height: 54px;
+  background-color: #eff6ff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 20px;
+  transition: background-color 0.3s;
+}
+
+.service-card:hover .icon-box {
+  background-color: #3b82f6;
+  color: white; /* Si c'est un icon font, sinon l'emoji reste */
 }
 
 .service-card h3 {
   font-size: 18px;
-  margin-bottom: 8px;
-  color: #0040d0;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
 }
 
 .service-card p {
   font-size: 14px;
-  color: #555;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.card-footer {
+  padding: 15px 24px;
+  background-color: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: #3b82f6;
+  transition: background-color 0.3s;
+}
+
+.service-card:hover .card-footer {
+  background-color: #eff6ff;
+}
+
+.arrow {
+  transition: transform 0.3s;
+}
+
+.service-card:hover .arrow {
+  transform: translateX(5px);
 }
 </style>

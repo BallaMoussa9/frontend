@@ -1,133 +1,124 @@
 <template>
   <MedecinLayout :id="currentDoctorIdComputed">
-    <section class="messages-section">
-      <h1>Messagerie Docteur</h1>
+    <div class="messaging-page">
+      <header class="page-header">
+        <h1>Messagerie Médicale</h1>
+        <div v-if="chatStore.error" class="error-banner">
+          ⚠️ {{ chatStore.error }}
+        </div>
+      </header>
 
-      <div class="chat-container">
-
-        <div class="sidebar-contacts">
-
-          <div class="tab-buttons">
-            <button
+      <div class="chat-wrapper">
+        <aside class="chat-sidebar">
+          <nav class="tab-nav">
+            <button 
+              type="button"
               :class="{ active: activeTab === 'conversations' }"
               @click="activeTab = 'conversations'; chatStore.fetchConversations()"
             >
-              Chats ({{ chatStore.getConversations?.length || 0 }})
+              Messages ({{ chatStore.getConversations?.length || 0 }})
             </button>
-            <button
+            <button 
+              type="button"
               :class="{ active: activeTab === 'users' }"
-              @click="activeTab = 'users'; loadAllUsersToChat()" >
-              Utilisateurs ({{ filteredUsersForChat?.length || 0 }})
+              @click="activeTab = 'users'; loadAllUsersToChat()"
+            >
+              Annuaire
             </button>
-          </div>
+          </nav>
 
-          <div v-if="activeTab === 'conversations'" class="contact-list-panel">
-            <p v-if="chatStore.loadingConversations" class="info-text">Chargement des conversations...</p>
-            <p v-else-if="chatStore.error" class="error-text">{{ chatStore.error }}</p>
-            <p v-else-if="chatStore.getConversations?.length === 0" class="info-text">
-              Aucune conversation existante.
-            </p>
-            <ul v-else class="list-unstyled">
-              <li
-                v-for="conv in chatStore.getConversations"
-                :key="conv.id"
-                :class="{ 'active': conv.id === chatStore.currentConversation?.id }"
-                @click="chatStore.startChatWithConversation(conv.id)"
-              >
-                <div class="contact-info">
-                  <img :src="getRecipientPhotoFromConv(conv)" alt="Photo" class="profile-photo-small">
-                  <span class="contact-name">
-                      {{ getRecipientFromConv(conv).first_name }} {{ getRecipientFromConv(conv).last_name }}
-                  </span>
-                </div>
-                <div class="last-message">
-                  {{ conv.messages[0]?.content.substring(0, 30) || 'Démarrer le chat' }}
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          <div v-else-if="activeTab === 'users'" class="contact-list-panel">
-            <div class="search-box">
-              <input v-model="searchQuery" @input="searchUsers" placeholder="Rechercher un utilisateur..." />
+          <div class="list-container">
+            <div v-if="activeTab === 'users'" class="search-area">
+              <input v-model="searchQuery" @input="searchUsers" placeholder="Rechercher..." />
             </div>
 
-            <p v-if="userStore.loading" class="info-text">Chargement des utilisateurs...</p>
-            <p v-else-if="userStore.error" class="error-text">{{ userStore.error }}</p>
-            <p v-else-if="filteredUsersForChat?.length === 0" class="info-text">
-              {{ searchQuery ? 'Aucun utilisateur trouvé.' : 'Cliquez sur un nom pour chatter.' }}
-            </p>
+            <div v-if="chatStore.loadingConversations || userStore.loading" class="loading-sidebar">
+              Chargement...
+            </div>
 
-            <ul v-else class="list-unstyled">
-              <li
-                v-for="user in filteredUsersForChat" :key="user.id"
-                :class="{ 'active-contact': chatStore.selectedRecipient?.id === user.id }"
-                @click="startChatWithUser(user)" >
-                <div class="contact-info">
-                  <img :src="getUserPhoto(user)" alt="Photo" class="profile-photo-small">
-                  <span class="contact-name">
-                    {{ user.first_name }} {{ user.last_name }}
-                  </span>
-                </div>
-                <div class="user-role">
-                    {{ user.roles && user.roles.length > 0 ? user.roles[0].name : 'Utilisateur' }}
-                </div>
-              </li>
+            <ul class="contact-list">
+              <template v-if="activeTab === 'conversations'">
+                <li 
+                  v-for="conv in chatStore.getConversations" 
+                  :key="conv.id"
+                  :class="{ 'active': conv.id === chatStore.currentConversation?.id }"
+                  @click="chatStore.startChatWithConversation(conv.id)"
+                >
+                  <img :src="getRecipientPhotoFromConv(conv)" class="avatar-sm" alt="Photo">
+                  <div class="contact-meta">
+                    <span class="name">{{ getRecipientFromConv(conv).first_name }} {{ getRecipientFromConv(conv).last_name }}</span>
+                    <span class="preview">{{ conv.messages[0]?.content || 'Démarrer le chat' }}</span>
+                  </div>
+                </li>
+              </template>
+
+              <template v-else>
+                <li 
+                  v-for="user in filteredUsersForChat" 
+                  :key="user.id"
+                  :class="{ 'selected-user': chatStore.selectedRecipient?.id === user.id }"
+                  @click="startChatWithUser(user)"
+                >
+                  <img :src="getUserPhoto(user)" class="avatar-sm" alt="Photo">
+                  <div class="contact-meta">
+                    <span class="name">{{ user.first_name }} {{ user.last_name }}</span>
+                    <span class="role">{{ user.roles?.[0]?.name || 'Utilisateur' }}</span>
+                  </div>
+                </li>
+              </template>
             </ul>
           </div>
+        </aside>
 
-        </div>
-
-        <div class="chat-box">
-          <p v-if="chatStore.error" class="error-text chat-error-display">{{ chatStore.error }}</p>
-
-          <div v-if="chatStore.loading || isConversationInitializationPending" class="chat-loading">
-            {{ isConversationInitializationPending ? 'Initialisation de la conversation...' : 'Chargement des messages...' }}
+        <main class="chat-window">
+          <div v-if="!chatStore.currentConversation?.id && !chatStore.selectedRecipient?.id" class="empty-chat">
+            <div class="illustration">💬</div>
+            <p>Sélectionnez une conversation</p>
           </div>
 
-          <div v-else-if="!chatStore.currentConversation?.id && !chatStore.selectedRecipient?.id" class="chat-placeholder">
-            Sélectionnez une personne pour commencer à chatter.
+          <div v-else-if="chatStore.loading || isConversationInitializationPending" class="chat-loading-overlay">
+            <p>Chargement des messages...</p>
           </div>
 
           <template v-else>
             <div class="chat-header">
-                <img :src="chatStore.recipientProfilePhoto" alt="Photo" class="profile-photo-large">
-                <h2>Chat avec {{ chatStore.recipientName }}</h2>
+              <img :src="chatStore.recipientProfilePhoto" class="avatar-md" alt="Destinataire">
+              <div class="header-info">
+                <h2>{{ chatStore.recipientName }}</h2>
+                <span class="status-online">En ligne</span>
+              </div>
             </div>
 
-            <div class="chat-thread" ref="chatThreadRef">
-                <div
-                v-for="msg in [...chatStore.messages].reverse()"
+            <div class="chat-messages" ref="chatThreadRef">
+              <div 
+                v-for="msg in [...chatStore.messages].reverse()" 
                 :key="msg.id"
-                :class="['message', { 'my-message': chatStore.isMyMessage(msg), 'their-message': !chatStore.isMyMessage(msg) }]"
+                :class="['msg-wrapper', chatStore.isMyMessage(msg) ? 'sent' : 'received']"
               >
-                <div class="message-bubble">
-                    {{ msg.content }}
-                    <span class="message-time">{{ formatTime(msg.created_at) }}</span>
+                <div class="bubble">
+                  {{ msg.content }}
+                  <span class="time">{{ formatTime(msg.created_at) }}</span>
                 </div>
               </div>
             </div>
 
-            <form @submit.prevent="handleSendMessage" class="message-input-form">
-              <input
-                v-model="messageInput"
-                type="text"
-                placeholder="Écrire un message..."
-                required
-                :disabled="isInputDisabled"
-              />
-              <button
-                type="submit"
-                :disabled="isInputDisabled || chatStore.sending"
-              >
-                <span v-if="chatStore.sending">Envoi...</span>
-                <span v-else>Envoyer</span>
-              </button>
-            </form>
+            <footer class="chat-footer">
+              <form @submit.prevent="handleSendMessage" class="input-form">
+                <input 
+                  v-model="messageInput" 
+                  type="text" 
+                  placeholder="Votre message..." 
+                  :disabled="isInputDisabled"
+                >
+                <button type="submit" :disabled="isInputDisabled || chatStore.sending">
+                  {{ chatStore.sending ? '...' : 'Envoyer' }}
+                </button>
+              </form>
+            </footer>
           </template>
-        </div>
+        </main>
       </div>
-    </section>
+    </div>
   </MedecinLayout>
 </template>
 
@@ -377,369 +368,47 @@ watch(currentDoctorIdComputed, (newId) => {
 }, { immediate: true });
 </script>
 
-<!-- BLOC STYLE GLOBAL POUR LES VARIABLES CSS (Non scopé) -->
-<style>
-/* COULEURS DU THÈME DOCTEUR DÉFINIES GLOBALEMENT POUR ÉVITER LES ERREURS DE SCOPE */
-:root {
-    --primary-doctor-blue: #002580; /* Bleu profond principal */
-    --accent-doctor-blue: #0040d0; /* Bleu plus clair pour les accents */
-    --patient-bubble-bg: #e2e6ea; /* Gris clair pour les messages des patients */
-    --light-bg: #f8f9fa; /* Fond général */
-    --white: #ffffff;
-    --border-color: #e9ecef; /* Bordures générales */
-    --text-color: #343a40; /* Texte sombre */
-    --light-text: #6c757d; /* Texte secondaire */
-    --tab-inactive-bg: #e9eef8; /* Fond inactif des onglets */
-    --tab-active-bg: #ffffff; /* Fond actif des onglets */
-    --list-hover-bg: #dbe4f2; /* Survol de la liste */
-    --list-active-bg: #0040d0; /* Conversation active */
-    --contact-active-bg: #ccd8ff; /* Contact actif dans l'onglet patients */
-    --send-button-disabled-bg: #cccccc; /* Couleur pour le bouton désactivé */
-}
-</style>
+<!-- BLOC STYLE GLOBAL POUR LES VARIABLES CSS (Non scopé) --><style scoped>
+.messaging-page { height: calc(100vh - 60px); display: flex; flex-direction: column; background: #f1f5f9; padding: 20px; }
+.page-header h1 { color: #1c325f; font-size: 1.8rem; margin-bottom: 15px; }
+.chat-wrapper { display: flex; flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+.chat-sidebar { width: 320px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+.tab-nav { display: flex; background: #f8fafc; padding: 10px; gap: 5px; }
+.tab-nav button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; background: transparent; color: #64748b; font-size: 13px; }
+.tab-nav button.active { background: #007aff; color: white; }
+.list-container { flex: 1; overflow-y: auto; }
+.search-area { padding: 15px; border-bottom: 1px solid #f1f5f9; }
+.search-area input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 20px; background: #f8fafc; }
+.contact-list { list-style: none; padding: 0; margin: 0; }
+.contact-list li { display: flex; align-items: center; gap: 12px; padding: 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: 0.2s; }
+.contact-list li.active { background: #eff6ff; border-left: 4px solid #007aff; }
+.avatar-sm { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+.contact-meta { display: flex; flex-direction: column; overflow: hidden; }
+.contact-meta .name { font-weight: 700; color: #1e293b; font-size: 14px; }
+.contact-meta .preview, .contact-meta .role { font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-window { flex: 1; display: flex; flex-direction: column; background: #ffffff; position: relative; }
+.chat-header { padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; background: white; z-index: 10; }
+.avatar-md { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+.header-info h2 { font-size: 16px; margin: 0; color: #1e293b; }
+.status-online { font-size: 11px; color: #10b981; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 15px; background: #f8fafc; }
+.msg-wrapper { display: flex; width: 100%; }
+.msg-wrapper.sent { justify-content: flex-end; }
+.msg-wrapper.received { justify-content: flex-start; }
+.bubble { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 14px; position: relative; line-height: 1.5; }
+.sent .bubble { background: #007aff; color: white; border-bottom-right-radius: 2px; }
+.received .bubble { background: white; color: #1e293b; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.time { display: block; font-size: 10px; margin-top: 5px; opacity: 0.7; text-align: right; }
+.chat-footer { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: white; }
+.input-form { display: flex; gap: 10px; }
+.input-form input { flex: 1; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; }
+.input-form button { padding: 0 20px; background: #007aff; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
+.illustration { font-size: 60px; margin-bottom: 20px; }
+.error-banner { background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; }
 
-<!-- BLOC STYLE SCOPÉ (Contient toutes les règles du composant) -->
-<style scoped>
-/* Conteneur et titres */
-.messages-section {
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-}
-h1 {
-    font-size: 2.2em;
-    color: var(--primary-doctor-blue);
-    margin-bottom: 25px;
-    border-bottom: 2px solid var(--accent-doctor-blue);
-    padding-bottom: 10px;
-}
-
-.chat-container {
-    display: flex;
-    height: 75vh;
-    min-height: 500px;
-    background-color: var(--light-bg);
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Sidebar Contacts / Utilisateurs */
-.sidebar-contacts {
-    width: 350px;
-    background: var(--tab-inactive-bg);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.tab-buttons {
-    display: flex;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tab-buttons button {
-    flex: 1;
-    padding: 15px 0;
-    border: none;
-    background-color: var(--tab-inactive-bg);
-    color: var(--primary-doctor-blue);
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-bottom: 3px solid transparent;
-}
-
-.tab-buttons button.active {
-    background-color: var(--tab-active-bg);
-    border-bottom: 3px solid var(--accent-doctor-blue);
-    color: var(--accent-doctor-blue);
-}
-
-.contact-list-panel {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 0;
-}
-
-.search-box {
-    padding: 15px 20px 10px;
-    background-color: var(--tab-active-bg);
-    border-bottom: 1px solid var(--border-color);
-}
-.search-box input {
-    width: 100%;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-}
-
-.list-unstyled {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.list-unstyled li {
-    padding: 15px 20px;
-    cursor: pointer;
-    border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s;
-}
-.list-unstyled li:hover {
-    background-color: var(--list-hover-bg);
-}
-
-/* Styles pour les éléments actifs et les rôles */
-.list-unstyled li.active { /* Pour les conversations existantes */
-    background-color: var(--list-active-bg);
-    color: white;
-    font-weight: 500;
-}
-.list-unstyled li.active .contact-name,
-.list-unstyled li.active .last-message,
-.list-unstyled li.active .user-role {
-    color: white;
-}
-.list-unstyled li.active .profile-photo-small {
-    border: 2px solid white;
-}
-
-.active-contact { /* Pour l'utilisateur sélectionné dans l'onglet "Utilisateurs" */
-    background-color: var(--contact-active-bg);
-    color: var(--text-color);
-    border-left: 4px solid var(--accent-doctor-blue);
-    padding-left: 16px !important;
-}
-
-.user-role {
-    font-size: 0.8em;
-    color: var(--light-text);
-    font-style: italic;
-    padding-left: 50px;
-    margin-top: 2px;
-}
-
-.contact-info {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-.contact-name {
-    font-weight: bold;
-    color: var(--text-color);
-    margin-left: 10px;
-}
-/* Adapte la couleur du nom si l'élément de liste est actif */
-.list-unstyled li.active .contact-name,
-.list-unstyled li.active-contact .contact-name {
-    color: inherit;
-}
-
-.last-message {
-    font-size: 0.85em;
-    color: var(--light-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding-left: 50px;
-}
-/* Adapte la couleur du dernier message si l'élément de liste est actif */
-.list-unstyled li.active .last-message {
-    color: rgba(255, 255, 255, 0.8);
-}
-.list-unstyled li.active-contact .last-message {
-    color: var(--light-text);
-}
-
-.profile-photo-small {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--white);
-}
-
-
-/* Zone de Chat */
-.chat-box {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--white);
-    position: relative;
-}
-
-.chat-error-display {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    width: auto;
-    max-width: 90%;
-}
-
-
-.chat-header {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--light-bg);
-}
-
-.chat-header h2 {
-    margin: 0;
-    font-size: 1.2em;
-    color: var(--text-color);
-    margin-left: 15px;
-}
-.profile-photo-large {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--accent-doctor-blue);
-}
-
-.chat-thread {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column-reverse;
-}
-
-.message {
-    margin-top: 10px;
-    max-width: 70%;
-}
-
-.message-bubble {
-    padding: 10px 15px;
-    border-radius: 18px;
-    line-height: 1.4;
-    position: relative;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-
-.my-message {
-    align-self: flex-end;
-    align-items: flex-end;
-    margin-left: auto;
-}
-.my-message .message-bubble {
-    background-color: var(--primary-doctor-blue);
-    color: white;
-    border-bottom-right-radius: 2px;
-}
-
-.their-message {
-    align-self: flex-start;
-    align-items: flex-start;
-    margin-right: auto;
-}
-.their-message .message-bubble {
-    background-color: var(--patient-bubble-bg);
-    color: var(--text-color);
-    border-bottom-left-radius: 2px;
-}
-
-.message-time {
-    display: block;
-    font-size: 0.7em;
-    margin-top: 3px;
-    opacity: 0.7;
-    text-align: right;
-    color: inherit;
-}
-.my-message .message-time {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* Formulaire d'envoi */
-.message-input-form {
-    display: flex;
-    padding: 15px 20px;
-    border-top: 1px solid var(--border-color);
-    background-color: var(--light-bg);
-    align-items: center; /* Centrer verticalement les éléments */
-    gap: 10px; /* Espace entre input et bouton */
-}
-
-.message-input-form input {
-    flex-grow: 1;
-    padding: 12px;
-    margin: 0;
-    border-radius: 20px;
-    border: 1px solid #ccc;
-    font-size: 1em;
-}
-.message-input-form input:focus {
-    border-color: var(--accent-doctor-blue);
-    box-shadow: 0 0 0 2px rgba(0, 64, 208, 0.25);
-    outline: none;
-}
-
-.message-input-form button {
-    flex-shrink: 0; /* Empêche le bouton de rétrécir */
-    padding: 12px 25px;
-    background-color: var(--primary-doctor-blue); /* Couleur active par défaut */
-    color: white;
-    border: none;
-    border-radius: 20px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.message-input-form button:hover:not(:disabled) {
-    background-color: var(--accent-doctor-blue); /* Couleur au survol */
-}
-.message-input-form button:disabled {
-    background-color: var(--send-button-disabled-bg); /* Couleur quand désactivé */
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-/* États de chargement/erreur */
-.info-text, .chat-placeholder, .chat-loading {
-    padding: 20px;
-    text-align: center;
-    color: var(--light-text);
-    font-style: italic;
-}
-.chat-placeholder {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    font-size: 1.1em;
-}
-.chat-loading {
-    /* Style du chat-loading si vous le rendez statique ou absolu */
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.2em;
-    color: var(--accent-doctor-blue);
-    z-index: 10;
-}
-.error-text {
-    color: #dc3545;
-    padding: 15px;
-    border-radius: 5px;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    margin: 10px 20px;
-    text-align: center;
+@media (max-width: 768px) {
+  .chat-sidebar { width: 80px; }
+  .contact-meta, .search-area { display: none; }
 }
 </style>

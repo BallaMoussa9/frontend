@@ -1,23 +1,27 @@
 <template>
   <MedecinLayout>
     <div class="patients-page">
-      <div class="patient-list-container">
-        <h2 class="section-title">Liste de tous les Patients</h2>
+      <aside class="patient-list-container no-print">
+        <h2 class="section-title">Annuaire Patients</h2>
 
         <div class="search-bar">
+          <span class="search-icon">🔍</span>
           <input
             v-model="searchTerm"
             @input="handleSearch"
-            placeholder="Rechercher par nom, email..."
+            placeholder="Nom, email, ID..."
             class="search-input"
           />
-          <span class="search-icon">🔍</span>
         </div>
 
         <div v-if="patientStore.loading" class="loading-overlay">
-          <p>Chargement des patients en cours...</p>
+          <div class="spinner"></div>
+          <p>Chargement...</p>
         </div>
-        <p v-if="patientStore.error" class="error-message">Erreur lors du chargement : {{ patientStore.error }}</p>
+
+        <div v-if="patientStore.error" class="error-banner">
+          {{ patientStore.error }}
+        </div>
 
         <ul class="patient-list">
           <li v-if="!patientStore.loading && filteredPatients.length === 0" class="empty-list">
@@ -35,96 +39,94 @@
               <img :src="getPatientPhoto(patient)" alt="Photo" class="avatar" />
               <div class="info">
                 <strong>{{ patient.user?.first_name }} {{ patient.user?.last_name }}</strong>
-                <small>Patient ID: {{ patient.id }}</small>
+                <small class="id-tag">ID: #{{ patient.id }}</small>
                 <small class="email">{{ patient.user?.email }}</small>
               </div>
             </div>
-             <span v-if="selectedPatient?.id === patient.id" class="arrow-indicator">►</span>
+            <span v-if="selectedPatient?.id === patient.id" class="arrow-indicator">➤</span>
           </li>
         </ul>
-      </div>
+      </aside>
 
-      <div class="patient-details-container">
-        <div v-if="!selectedPatient" class="placeholder">
-          Sélectionnez un patient dans la liste de gauche pour afficher son dossier médical.
+      <main class="patient-details-container">
+        <div v-if="!selectedPatient" class="placeholder no-print">
+          <div class="placeholder-icon">📁</div>
+          <p>Sélectionnez un patient pour consulter son Dossier Médical Électronique (DME)</p>
         </div>
 
         <div v-else class="patient-details">
-            <h2 class="details-header">
-                Dossier de {{ selectedPatient.user?.first_name }} {{ selectedPatient.user?.last_name }}
-                <div v-if="loadingDme" class="inline-loader">Chargement DME...</div>
-            </h2>
+          <header class="details-header">
+            <div class="header-info">
+              <h1>Dossier de {{ selectedPatient.user?.first_name }} {{ selectedPatient.user?.last_name }}</h1>
+              <span v-if="loadingDme" class="inline-loader no-print">🔄 Actualisation du DME...</span>
+            </div>
+            <button class="btn-print no-print" @click="imprimerDossier">
+              🖨️ Imprimer le Dossier
+            </button>
+          </header>
 
-            <section class="patient-info card-section">
-                <h3>Informations Personnelles</h3>
-                <p><strong>Date de naissance:</strong> {{ selectedPatient.user?.birth_date }}</p>
-                <p><strong>Sexe:</strong> {{ selectedPatient.genre }}</p>
-                <p><strong>Groupe Sanguin:</strong> {{ selectedPatient.group_sanguine }}</p>
+          <div class="details-grid">
+            <section class="card-section">
+              <h3>👤 Informations Personnelles</h3>
+              <div class="info-grid">
+                <p><strong>Naissance:</strong> {{ formatDate(selectedPatient.user?.birth_date) }}</p>
+                <p><strong>Sexe:</strong> <span class="badge-blue">{{ selectedPatient.genre || 'N/A' }}</span></p>
+                <p><strong>Groupe Sanguin:</strong> <span class="badge-red">{{ selectedPatient.group_sanguine || 'N/A' }}</span></p>
                 <p><strong>Maladies Chroniques:</strong> {{ selectedPatient.maladies_chroniques || 'Aucune' }}</p>
+              </div>
             </section>
 
-            <section class="prescription-section card-section">
-                <h3>Prescriptions Récentes</h3>
-                <div v-if="prescriptionStore.isLoading" class="info-text">Chargement des prescriptions...</div>
-                <div v-else-if="prescriptionStore.getError" class="error-message">{{ prescriptionStore.getError }}</div>
-
-                <div v-else-if="patientPrescriptions.length > 0">
-                    <div v-for="prescription in patientPrescriptions" :key="prescription.id" class="prescription-card">
-                        <p><strong>Ordonnance ID:</strong> {{ prescription.id }} | <strong>Date:</strong> {{ formatDate(prescription.created_at) }}</p>
-                        <p v-if="prescription.notes"><strong>Notes:</strong> {{ prescription.notes }}</p>
-
-                        <ul class="medication-list" v-if="prescription.lines && prescription.lines.length > 0">
-                            <li v-for="(line, index) in prescription.lines" :key="index">
-                                {{ line.medicament_name || 'Médicament non spécifié' }} ({{ line.dosage || 'Dosage non spécifié' }})
-                            </li>
-                        </ul>
-                        <p v-else class="info-text no-lines">
-                           ⚠️ Cette ordonnance est enregistrée mais ne contient aucune ligne de médicament.
-                        </p>
-                    </div>
+            <section class="card-section">
+              <h3>💊 Prescriptions Récentes</h3>
+              <div v-if="prescriptionStore.isLoading" class="loading-text">Chargement...</div>
+              <div v-else-if="patientPrescriptions.length > 0">
+                <div v-for="prescription in patientPrescriptions" :key="prescription.id" class="data-item">
+                  <div class="item-header">
+                    <strong>Ordonnance #{{ prescription.id }}</strong>
+                    <span>{{ formatDate(prescription.created_at) }}</span>
+                  </div>
+                  <ul class="med-list">
+                    <li v-for="(line, idx) in prescription.lines" :key="idx">
+                      🔹 {{ line.medicament_name }} ({{ line.dosage }})
+                    </li>
+                  </ul>
                 </div>
-                <p v-else class="info-text">
-                    Aucune prescription trouvée pour ce patient.
-                </p>
+              </div>
+              <p v-else class="empty-text">Aucune ordonnance.</p>
             </section>
 
-            <section class="analysis-section card-section">
-                <h3>Analyses Récentes & Résultats</h3>
-                <div v-if="labStore.isLoading" class="info-text">Chargement des demandes d'analyses...</div>
-                <div v-else-if="labStore.getError" class="error-message">{{ labStore.getError }}</div>
-
-                <div v-else-if="patientLabRequests.length > 0">
-                    <div v-for="analysis in patientLabRequests" :key="analysis.id" class="analysis-card">
-                        <h4>{{ analysis.type_of_analysis || 'Analyse (Type non spécifié)' }}</h4>
-                        <p><strong>Demande ID:</strong> {{ analysis.id }} | <strong>Date de la demande:</strong> {{ formatDate(analysis.created_at) }}</p>
-                        <p><strong>Statut:</strong> <span :class="getStatusClass(analysis.status)">{{ analysis.status }}</span></p>
-
-                        <div v-if="analysis.status === 'completed' || analysis.status === 'Terminé'" class="result-details">
-                            <p class="info-text">Résultats : Le détail complet nécessiterait un appel à `labStore.getLabRequest(analysis.id)`. Statut : **Terminé**</p>
-                            </div>
-                    </div>
+            <section class="card-section">
+              <h3>🔬 Laboratoire & Analyses</h3>
+              <div v-if="labStore.isLoading" class="loading-text">Chargement...</div>
+              <div v-else-if="patientLabRequests.length > 0">
+                <div v-for="analysis in patientLabRequests" :key="analysis.id" class="data-item">
+                  <div class="item-header">
+                    <strong>{{ analysis.type_of_analysis }}</strong>
+                    <span :class="getStatusClass(analysis.status)">{{ analysis.status }}</span>
+                  </div>
+                  <p class="small-date">Demandé le {{ formatDate(analysis.created_at) }}</p>
                 </div>
-                <p v-else class="info-text">Aucune demande d'analyse trouvée pour ce patient.</p>
+              </div>
+              <p v-else class="empty-text">Aucune analyse trouvée.</p>
             </section>
 
-            <section class="consultation-section card-section">
-                <h3>Historique des Consultations</h3>
-                <div v-if="consultationStore.loading" class="info-text">Chargement de l'historique des consultations...</div>
-                <div v-else-if="consultationStore.error" class="error-message">{{ consultationStore.error }}</div>
-
-                <div v-else-if="patientConsultations.length > 0">
-                    <div v-for="consultation in patientConsultations" :key="consultation.id" class="consultation-card">
-                        <h4>Consultation du {{ formatDate(consultation.start_date) }}</h4>
-                        <p><strong>ID:</strong> {{ consultation.id }}</p>
-                        <p><strong>Motif:</strong> {{ consultation.reason_for_visit || 'Non spécifié' }}</p>
-                        <p><strong>Statut:</strong> {{ consultation.status }}</p>
-                    </div>
+            <section class="card-section">
+              <h3>📅 Historique des Visites</h3>
+              <div v-if="consultationStore.loading" class="loading-text">Chargement...</div>
+              <div v-else-if="patientConsultations.length > 0">
+                <div v-for="consultation in patientConsultations" :key="consultation.id" class="data-item consultation">
+                  <div class="item-header">
+                    <strong>{{ formatDate(consultation.start_date) }}</strong>
+                    <span class="status-badge">{{ consultation.status }}</span>
+                  </div>
+                  <p><em>Motif:</em> {{ consultation.reason_for_visit }}</p>
                 </div>
-                <p v-else class="info-text">Aucune consultation enregistrée.</p>
+              </div>
+              <p v-else class="empty-text">Aucun historique.</p>
             </section>
-
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   </MedecinLayout>
 </template>
@@ -133,13 +135,12 @@
 import { ref, onMounted, computed } from 'vue'
 import MedecinLayout from '@/layouts/MedecinLayout.vue'
 
-// IMPORT DES STORES
+// STORES
 import { usePatientStore } from '@/stores/patientStore'
 import { usePrescriptionStore } from '@/stores/prescriptionStore'
 import { useLabStore } from '@/stores/labStore'
 import { useConsultationStore } from '@/stores/consultationStore'
 
-// INITIALISATION DES STORES
 const patientStore = usePatientStore()
 const prescriptionStore = usePrescriptionStore()
 const labStore = useLabStore()
@@ -148,37 +149,21 @@ const consultationStore = useConsultationStore()
 const searchTerm = ref('')
 let debounceTimeout = null
 const selectedPatient = ref(null)
-const loadingDme = ref(false) // Pour gérer un loading global du DME
+const loadingDme = ref(false)
 
-// Computed pour les données DME des Stores
+// COMPUTED DATA
 const patientPrescriptions = computed(() => prescriptionStore.prescriptions)
 const patientLabRequests = computed(() => labStore.labRequests)
 const patientConsultations = computed(() => consultationStore.patientConsultations)
 
-
-// ------------------- Logique de Données -------------------
-
 const filteredPatients = computed(() => {
+    let patientsSource = patientStore.patients?.data || patientStore.patients;
+    if (!Array.isArray(patientsSource)) return [];
 
-    let patientsSource = patientStore.patients;
+    if (!searchTerm.value) return patientsSource;
 
-    if (patientsSource && !Array.isArray(patientsSource) && Array.isArray(patientsSource.data)) {
-        patientsSource = patientsSource.data;
-    }
-
-    if (!Array.isArray(patientsSource)) {
-        return [];
-    }
-
-    let patients = patientsSource.filter(p => p);
-
-    if (!searchTerm.value) {
-        return patients
-    }
-
-    const query = searchTerm.value.toLowerCase()
-
-    return patients.filter(p =>
+    const query = searchTerm.value.toLowerCase();
+    return patientsSource.filter(p =>
         p.user && (
             p.user.first_name.toLowerCase().includes(query) ||
             p.user.last_name.toLowerCase().includes(query) ||
@@ -187,53 +172,43 @@ const filteredPatients = computed(() => {
     )
 })
 
+// LOGIQUE D'IMPRESSION
+const imprimerDossier = () => {
+    window.print();
+}
 
-// Déclenchement des appels API lors de la sélection
+// SELECTION PATIENT
 async function selectPatient(patientId) {
     const source = Array.isArray(patientStore.patients) ? patientStore.patients : patientStore.patients?.data;
-
     const patient = source?.find(p => p.id === patientId)
+    
     if (patient) {
         selectedPatient.value = patient
-        console.log("Patient sélectionné :", patient.user?.last_name)
-
         loadingDme.value = true;
-
-        // --- APPELS API RÉELS POUR LE DME ---
+        
         await Promise.all([
             prescriptionStore.fetchPatientPrescriptions(patientId),
-            // Assurez-vous que listLabRequests peut accepter {patient_id: patientId}
             labStore.listLabRequests({ patient_id: patientId }),
             consultationStore.fetchPatientConsultations(patientId)
         ])
-
         loadingDme.value = false;
-
-        console.log("Prescriptions chargées:", prescriptionStore.prescriptions);
-        console.log("Analyses chargées:", labStore.labRequests);
-        console.log("Consultations chargées:", consultationStore.patientConsultations);
     }
 }
 
 const handleSearch = () => {
     clearTimeout(debounceTimeout)
     debounceTimeout = setTimeout(() => {
-        console.log(`Filtre local appliqué pour : ${searchTerm.value}`);
+        console.log(`Recherche : ${searchTerm.value}`);
     }, 300)
 }
 
-
-// ------------------- Utilitaires -------------------
-
+// UTILS
 const getPatientPhoto = (patient) => {
     const user = patient?.user;
-    const photoUrl = user?.profile_photo_url;
-    if (photoUrl) {
-        return photoUrl;
-    }
-    const photoPath = user?.profile_photo_path;
-    if (photoPath) {
-        const cleanedPath = photoPath.startsWith('public/') ? photoPath.substring(7) : photoPath;
+    if (user?.profile_photo_url) return user.profile_photo_url;
+    
+    if (user?.profile_photo_path) {
+        const cleanedPath = user.profile_photo_path.replace('public/', '');
         return `http://localhost:8000/storage/${cleanedPath}`;
     }
     return 'https://via.placeholder.com/45/0040d0/ffffff?text=P';
@@ -241,16 +216,17 @@ const getPatientPhoto = (patient) => {
 
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('fr-FR', { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+    });
 }
 
 const getStatusClass = (status) => {
-    if (status === 'completed' || status === 'Terminé') return 'status-done';
-    if (status === 'pending' || status === 'En cours' || status === 'created') return 'status-pending';
+    const s = status?.toLowerCase();
+    if (s === 'completed' || s === 'terminé') return 'status-done';
+    if (s === 'pending' || s === 'en cours') return 'status-pending';
     return 'status-default';
 }
-
-// ------------------- Cycle de Vie -------------------
 
 onMounted(() => {
     patientStore.allPatient();
@@ -258,77 +234,69 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ------------------- Mise en page générale ------------------- */
-.patients-page { display: flex; min-height: 80vh; gap: 20px; padding: 32px; background-color: #f4f7ff; }
-.section-title { font-size: 1.5em; margin-bottom: 20px; color: #002580; border-bottom: 2px solid #e1e7f3; padding-bottom: 10px; }
+.patients-page { display: flex; height: calc(100vh - 80px); gap: 20px; padding: 20px; background-color: #f0f2f5; }
 
-/* ------------------- Colonne de gauche (Liste) ------------------- */
-.patient-list-container { width: 350px; background-color: #fff; border: 1px solid #e1e7f3; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); position: relative; display: flex; flex-direction: column; }
-.search-bar { position: relative; margin-bottom: 15px; }
-.search-input { width: 100%; padding: 10px 10px 10px 40px; border-radius: 20px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1em; }
-.search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #6c757d; }
-.patient-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
-.patient-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; border-bottom: 1px solid #e9eef8; cursor: pointer; transition: background-color 0.2s, border-left 0.2s; }
-.patient-card:hover { background-color: #f7f9fc; }
-.patient-card.selected { background-color: #eaf0ff; border-left: 4px solid #0040d0; padding-left: 6px; font-weight: 600; }
-.patient-entry { display: flex; align-items: center; gap: 15px; }
-.avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #e1e7f3; }
-.info { display: flex; flex-direction: column; }
-.info strong { color: #333; font-size: 1.1em; }
-.info small { font-size: 0.85em; color: #6c757d; }
-.info small.email { font-size: 0.75em; }
-.arrow-indicator { color: #0040d0; font-size: 1.1em; }
-.empty-list, .loading-overlay p { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
-.loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 10px; }
-.error-message { color: #c20000; padding: 10px; text-align: center; border-top: 1px solid #c20000; }
+/* Liste à gauche */
+.patient-list-container { width: 350px; background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.section-title { padding: 20px; font-size: 1.2rem; color: #1a2b4b; border-bottom: 1px solid #eee; margin: 0; }
+.search-bar { padding: 15px; position: relative; }
+.search-input { width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+.search-icon { position: absolute; left: 25px; top: 25px; color: #999; }
 
-/* ------------------- Colonne de droite (Dossier) ------------------- */
-.patient-details-container { flex: 1; background-color: #fff; border: 1px solid #e1e7f3; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); overflow-y: auto; }
-.placeholder { padding: 50px; text-align: center; color: #999; font-size: 1.2em; font-style: italic; }
-.patient-details { padding: 24px; }
-.details-header { font-size: 1.8em; color: #0040d0; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #eaf0ff; display: flex; justify-content: space-between; align-items: center; }
-.inline-loader { font-size: 0.6em; color: #0040d0; }
-.card-section { background-color: #fcfdff; border: 1px solid #e1e7f3; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
-.card-section h3 { color: #333; margin-bottom: 15px; font-size: 1.3em; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.patient-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; }
+.patient-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: 0.2s; }
+.patient-card:hover { background: #f8faff; }
+.patient-card.selected { background: #eef2ff; border-left: 4px solid #0040d0; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #eee; }
+.info { display: flex; flex-direction: column; margin-left: 12px; flex: 1; }
+.info strong { font-size: 0.95rem; color: #333; }
+.id-tag { font-size: 0.75rem; color: #0040d0; font-weight: 600; }
+.email { font-size: 0.75rem; color: #888; }
 
-/* Styles spécifiques aux Prescriptions et Analyses */
-.prescription-card, .analysis-card, .consultation-card {
-    border-left: 3px solid #0040d0;
-    padding: 10px 15px;
-    margin-bottom: 15px;
-    background-color: #eaf0ff;
-    border-radius: 4px;
-}
-.prescription-card strong, .consultation-card strong { color: #002580; }
-.medication-list {
-    list-style: disc;
-    margin-left: 20px;
-    padding-left: 0;
-    font-size: 0.9em;
-    color: #444;
-}
-.info-text.no-lines { color: #c20000; font-weight: 500;}
+/* Dossier à droite */
+.patient-details-container { flex: 1; background: white; border-radius: 12px; overflow-y: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.placeholder { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 40px; }
+.placeholder-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.3; }
 
-.analysis-card h4, .consultation-card h4 {
-    margin: 5px 0 8px 0;
-    font-size: 1.1em;
-    color: #002580;
+.patient-details { padding: 30px; }
+.details-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; }
+.details-header h1 { font-size: 1.5rem; color: #1a2b4b; margin: 0; }
+.inline-loader { font-size: 0.8rem; color: #0040d0; animation: pulse 1.5s infinite; }
+
+.details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.card-section { background: #f8faff; border: 1px solid #eef2ff; border-radius: 10px; padding: 20px; }
+.card-section h3 { font-size: 1rem; color: #1a2b4b; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; }
+.badge-blue { background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; }
+.badge-red { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+
+.data-item { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #edf2f7; }
+.item-header { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
+.med-list { padding-left: 0; list-style: none; font-size: 0.85rem; margin-top: 8px; }
+.status-done { color: #059669; font-weight: bold; }
+.status-pending { color: #d97706; font-weight: bold; }
+
+.btn-print { background: #0040d0; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+.btn-print:hover { background: #0030a0; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+/* --- LOGIQUE D'IMPRESSION --- */
+@media print {
+  .no-print { display: none !important; }
+  
+  .patients-page { display: block; padding: 0; background: white; }
+  .patient-details-container { box-shadow: none; border: none; }
+  .patient-details { padding: 0; }
+  .details-grid { display: block; }
+  .card-section { 
+    margin-bottom: 30px; 
+    border: 1px solid #eee !important; 
+    break-inside: avoid;
+    background: #f8faff !important;
+    -webkit-print-color-adjust: exact; 
+  }
+  .details-header { border-bottom: 2px solid #333; }
 }
-.result-details {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed #c0cff0;
-}
-.status-done {
-    color: green;
-    font-weight: bold;
-}
-.status-pending {
-    color: orange;
-    font-weight: bold;
-}
-.status-default {
-    color: #444;
-}
-.info-text { font-style: italic; color: #6c757d; }
 </style>

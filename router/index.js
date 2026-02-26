@@ -7,7 +7,7 @@ const routes = [
     component: () => import('../src/views/AcceuilView.vue'),
   },
   {
-    path: '/connection',
+    path: '/connection', 
     name: 'Login',
     component: () => import('../src/views/ConnectionView.vue'),
   },
@@ -280,7 +280,7 @@ const routes = [
     props: true,
     meta: { requiresAuth: true, role: 'doctor' },
   },
-  {
+  { 
     // '/doctor/chat/:patientId',
     path: '/doctor/chat/:id',
     name: 'Messagerie',
@@ -289,6 +289,16 @@ const routes = [
     meta: {
       requiresAuth: true,
       role: 'doctor',
+    },
+  },
+  {
+    path: '/doctor/demandeanalyse/:id',
+    name: 'demandeAnalyse',
+    component: () => import('@/views/doctor/DemandeAnalyse.vue'),
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: 'doctor', 
     },
   },
 
@@ -317,6 +327,8 @@ const routes = [
   path: '/nurse/:idNurse/patient/:idPatient',
   name: 'NursePatientDetails',
   component: () => import('@/views/nurse/PatientDetailsView.vue'),
+   meta: { requiresAuth: true, role: 'nurse' },
+    props: true,
 },
   {
     path: '/nurse/vitals/:id',
@@ -440,6 +452,50 @@ const routes = [
       meta: { requiresAuth: true, requiredRole: 'urgentist' },
       props:true,
     },
+    //-----------------------Laborantin---------------------------------
+  {
+      path: '/Laborantin/dashboard/:id',
+      name: 'LaborantinDashboard',
+      component: () => import('@/views/lab/LabDashboard.vue'),
+      meta: { requiresAuth: true, requiredRole: 'lab_technician' }, // S'assurer que seul l'urgentiste y accède
+      props:true,
+    },
+    {
+    path: '/Laborantin/BloddGestion/:id', // Notez les noms clairs des paramètres
+    name: 'BloodGestion',
+    component: () => import('@/views/lab/BloodBankView.vue'),
+    meta: { requiresAuth: true, requiredRole: 'lab_technician' },
+    props: true, // Ceci transmettra urgentistId et alertId comme props au composant
+  },
+    {
+      path: '/Laborantin/AnalyseGestion/:id',
+      name: 'AnalyseGestion',
+      component: () => import('@/views/lab/AjouterAnalyseView.vue'),
+      meta: { requiresAuth: true, requiredRole: 'lab_technician' },
+      props:true,
+    },
+    {
+      path: '/Laborantin/profile/:id',
+      name: 'LaborantinProfile',
+      component: () => import('@/views/lab/ProfileView.vue'),// C'est ici que le composant est lié
+      meta: { requiresAuth: true, requiredRole: 'lab_technician' },
+      props:true,
+    },
+    {
+      path: '/Laborantin/AllAnalyse/:id',
+      name: 'AnalyseEffectue',
+      component: () => import('@/views/lab/AllAnlayseView.vue'),// C'est ici que le composant est lié
+      meta: { requiresAuth: true, requiredRole: 'lab_technician' },
+      props:true,
+    },
+    {
+      path: '/Laborantin/AllAnalyse/:id',
+      name: 'ListeDemandeAnalyse',
+      component: () => import('@/views/lab/DemandeAnalyseViews.vue'),// C'est ici que le composant est lié
+      meta: { requiresAuth: true, requiredRole: 'lab_technician' },
+      props:true,
+    },
+
 ]
 
 const router = createRouter({

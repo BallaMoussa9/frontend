@@ -6,6 +6,8 @@ import apiLab from '@/services/apiLab'; // Importez votre service API
 export const useLabStore = defineStore('lab', {
   state: () => ({
     labRequests: [], // Liste de toutes les demandes d'analyses
+    readyAnalyses: [],
+    bloodStock: [],
     currentLabRequest: null, // Demande d'analyse actuellement sélectionnée
     loading: false,
     error: null,
@@ -16,6 +18,7 @@ export const useLabStore = defineStore('lab', {
     getLabRequests: (state) => state.labRequests,
     getCurrentLabRequest: (state) => state.currentLabRequest,
     isLoading: (state) => state.loading,
+    getBloodStock: (state) => state.bloodStock, // Nouveau
     getError: (state) => state.error,
     getSuccess: (state) => state.success,
   },
@@ -85,6 +88,25 @@ export const useLabStore = defineStore('lab', {
     },
 
     /**
+     * Charge uniquement les demandes d'analyses prêtes pour la saisie des résultats (status: completed).
+     */
+    async listReadyAnalyses() {
+      this.clearMessages();
+      this.setLoading(true);
+      try {
+        const data = await apiLab.getCompletedAnalyses();
+        this.readyAnalyses = Array.isArray(data) ? data : [];
+        this.setSuccess('Analyses terminées chargées avec succès.');
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || err.message;
+        this.setError('Échec du chargement des analyses terminées: ' + errorMessage);
+        this.readyAnalyses = [];
+      } finally {
+        this.setLoading(false);
+      }
+    },
+
+    /**
      * Charge les détails d'une demande d'analyse spécifique.
      * @param {number} requestId - L'ID de la demande d'analyse
      * @returns {Promise<boolean>} Indique si le chargement a réussi
@@ -107,38 +129,31 @@ export const useLabStore = defineStore('lab', {
       }
     },
 
-    /**
-     * Met à jour le statut d'une demande d'analyse.
-     * @param {number} requestId - L'ID de la demande d'analyse
-     * @param {string} status - Le nouveau statut
-     * @returns {Promise<boolean>} Indique si la mise à jour a réussi
-     */
     async updateLabRequestStatus(requestId, status) {
-      this.clearMessages();
-      this.setLoading(true);
-      try {
-        const result = await apiLab.updateLabRequestStatus(requestId, status);
-        if (result.lab_request) {
-          // Met à jour la demande dans la liste
-          const index = this.labRequests.findIndex(req => req.id === requestId);
-          if (index !== -1) {
-            this.labRequests[index] = result.lab_request;
-          }
-          // Si c'est la demande actuellement affichée, mettez-la à jour
-          if (this.currentLabRequest && this.currentLabRequest.id === requestId) {
-            this.currentLabRequest = result.lab_request;
-          }
-        }
-        this.setSuccess('Statut de la demande d\'analyse mis à jour avec succès.');
+  this.clearMessages();
+  this.setLoading(true);
+  try {
+    const result = await apiLab.updateLabRequestStatus(requestId, status);
+    
+    // Vérification stricte de la réponse
+    if (result && result.lab_request) {
+      const index = this.labRequests.findIndex(req => Number(req.id) === Number(requestId));
+      
+      if (index !== -1) {
+        // On utilise splice pour garantir la réactivité de Vue
+        this.labRequests.splice(index, 1, result.lab_request);
+        this.setSuccess('Statut mis à jour localement');
         return true;
-      } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message;
-        this.setError('Échec de la mise à jour du statut de la demande d\'analyse: ' + errorMessage);
-        return false;
-      } finally {
-        this.setLoading(false);
       }
-    },
+    }
+    return false;
+  } catch (err) {
+    this.setError(err.message);
+    return false;
+  } finally {
+    this.setLoading(false);
+  }
+}, 
 
     /**
      * Télécharge les résultats d'analyse pour une demande spécifique.
@@ -175,5 +190,38 @@ export const useLabStore = defineStore('lab', {
         this.setLoading(false);
       }
     },
+    /**
+     * Charge la liste complète du stock de sang depuis l'API.
+     */
+    async fetchBloodStock() {
+      this.setLoading(true);
+      try {
+        const data = await apiLab.getBloodStock();
+        this.bloodStock = data;
+      } catch (err) {
+        this.setError('Impossible de charger le stock de sang');
+      } finally { this.setLoading(false); }
+    },
+    /**
+     * Enregistre une nouvelle poche de sang et l'ajoute au stock local.
+     */
+    async addBloodUnit(bloodData) {
+      this.clearMessages();
+      this.setLoading(true);
+      try {
+        const result = await apiLab.storeBloodUnit(bloodData);
+        if (result.data) {
+          this.bloodStock.unshift(result.data); // Ajout immédiat en haut de liste
+        }
+        this.setSuccess('Unité de sang enregistrée et liée au patient.');
+        return true;
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors du prélèvement';
+        this.setError(msg);
+        return false;
+      } finally { this.setLoading(false); }
+    }
   },
+  
+  
 });

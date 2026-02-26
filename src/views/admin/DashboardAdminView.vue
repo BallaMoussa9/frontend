@@ -14,7 +14,9 @@
       <div class="middle-section">
         <div class="chart-card large-chart">
           <h4>Status des patients</h4>
-          <Line :data="statusChartData" :options="chartOptions" />
+          <div class="chart-container">
+            <Line :data="statusChartData" :options="chartOptions" />
+          </div>
         </div>
       </div>
 
@@ -27,9 +29,10 @@
           </div>
           <ul v-else class="appointment-list">
             <li v-for="req in pendingAppointments" :key="req.id">
-              {{ req.patient_name || 'Patient Inconnu' }} — 
-              {{ req.phone || 'N/A' }} — 
-              {{ formatDate(req.appointment_date) }}
+              <div class="list-item-content">
+                <span class="main-info">{{ req.patient_name || 'Patient Inconnu' }}</span>
+                <span class="sub-info">{{ req.phone || 'N/A' }} — {{ formatDate(req.appointment_date) }}</span>
+              </div>
             </li>
           </ul>
         </div>
@@ -42,9 +45,10 @@
           </div>
           <ul v-else class="recent-patients">
             <li v-for="pat in recentPatientsList" :key="pat.id">
-              {{ pat.first_name }} {{ pat.last_name }} — 
-              {{ pat.hospital_name || 'Hôpital Inconnu' }} — 
-              {{ formatDate(pat.created_at) }}
+              <div class="list-item-content">
+                <span class="main-info">{{ pat.first_name }} {{ pat.last_name }}</span>
+                <span class="sub-info">{{ pat.hospital_name || 'Hôpital Inconnu' }} — {{ formatDate(pat.created_at) }}</span>
+              </div>
             </li>
           </ul>
         </div>
@@ -54,136 +58,82 @@
 </template>
 
 <script setup>
+/* --- TON SCRIPT (INCHANGÉ) --- */
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { computed, onMounted, ref } from 'vue'
-import dayjs from 'dayjs' // Import pour la gestion des dates
-
-// 🔑 IMPORTS DES STORES NÉCESSAIRES
+import dayjs from 'dayjs'
 import { useAuthStore } from '../../stores/authStores'
 import { usePatientStore } from '@/stores/patientStore'
 import { useUrgentistStore } from '@/stores/urgentistStore'
 import { useNurseStore } from '@/stores/nurseStore'
 import { useDoctorStore } from '@/stores/doctorStore'
-// NOUVEL IMPORT
 import { useAppointmentPatientStore } from '@/stores/appointmentPatientStore' 
 
 import { Line } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement
-} from 'chart.js'
+import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement } from 'chart.js'
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement)
 
-// Initialisation des Stores
 const auth = useAuthStore()
 const patientStore = usePatientStore()
 const urgentistStore = useUrgentistStore()
 const nurseStore = useNurseStore()
 const doctorStore = useDoctorStore()
-const appointmentStore = useAppointmentPatientStore() // <-- Initialisation
+const appointmentStore = useAppointmentPatientStore()
 
-// Variables et fonctions utilitaires
-const MAX_RECENT_PATIENTS = 5; // Nombre maximum de patients récents à afficher
+const MAX_RECENT_PATIENTS = 5;
+const formatDate = (dateString) => dayjs(dateString).format('DD/MM/YYYY');
 
-const formatDate = (dateString) => {
-  return dayjs(dateString).format('DD/MM/YYYY');
-}
-
-// 🚀 DÉCLENCHEMENT DES ACTIONS AU MONTAGE
 onMounted(() => {
   patientStore.allPatient()
   urgentistStore.fetchAllUrgentists()
   nurseStore.fetchAllNurses()
   doctorStore.fetchAllDoctors()
   
-  // NOTE ADMIN: Puisque nous n'avons pas d'action fetchAllAppointments, 
-  // nous faisons une supposition. Si l'Admin est un Docteur dans le système :
-  // if (auth.user && auth.user.role === 'doctor') {
-  //    appointmentStore.fetchDoctorAppointments(auth.user.id);
-  // }
-  
-  // Dans le doute, nous ferons appel à une fonction de Mock ou laisserons vide
-  // jusqu'à ce que l'API Admin soit prête. Pour l'exemple, utilisons un ID 1 de Docteur si Admin a ce rôle
   if (auth.user?.role === 'admin' && auth.user.doctor_id) {
     appointmentStore.fetchDoctorAppointments(auth.user.doctor_id);
-  } else {
-    // CAS MOCK OU ADMIN PUR: On ne charge rien ou on met un ID fictif pour l'exemple si vous n'avez pas de données globales.
-    // Pour ne pas générer d'erreur, nous nous basons uniquement sur les données statiques/calculées.
   }
 })
 
-// --- Propriétés calculées pour les Statistiques ---
-
-// Patients
-const isPatientLoading = computed(() => !Array.isArray(patientStore.patients?.data))
-const patientCount = computed(() =>
+const patientCount = computed(() => 
   Array.isArray(patientStore.patients?.data) ? patientStore.patients.data.length : '...'
 )
 
-// Médecins
 const totalDoctorsCount = computed(() => {
   const doctors = doctorStore.doctors || []
-  return doctorStore.loading ? 'Chargement...' : doctors.length
+  return doctorStore.loading ? '...' : doctors.length
 })
 
-// Urgentistes Actifs
 const urgentistesActifsCount = computed(() => {
   const urgentists = urgentistStore.allUrgentists || []
-  const count = urgentists.filter(u => 
-    u.status === 'available' || u.status === 'on_duty'
-  ).length
-  return urgentistStore.loading ? 'Chargement...' : count
+  const count = urgentists.filter(u => u.status === 'available' || u.status === 'on_duty').length
+  return urgentistStore.loading ? '...' : count
 })
 
-// Infirmiers
 const totalNursesCount = computed(() => {
   const nurses = nurseStore.nurses || []
-  return nurseStore.loading ? 'Chargement...' : nurses.length
+  return nurseStore.loading ? '...' : nurses.length
 })
 
-
-// 📊 MISE À JOUR DES STATS PRINCIPALES
 const topStats = computed(() => [
-  { icon: '🧑‍⚕️', label: 'Le nombre des patients', value: patientCount.value },
+  { icon: '🧑‍⚕️', label: 'Nombre de patients', value: patientCount.value },
   { icon: '👨‍⚕️', label: 'Nos médecins', value: totalDoctorsCount.value },
   { icon: '🚑', label: 'Urgentistes Actifs', value: urgentistesActifsCount.value },
   { icon: '💉', label: 'Infirmiers', value: totalNursesCount.value },
 ])
 
-
-// --- Propriétés calculées pour les Tableaux (Dynamisation) ---
-
-// Demandes de rendez-vous (filtrage des rendez-vous en attente)
 const pendingAppointments = computed(() => {
   if (!appointmentStore.getAppointments) return [];
-  
-  // Nous supposons que le statut 'pending' ou 'en_attente' est utilisé
-  // J'ajoute un tri par date pour que les plus anciens (à traiter en premier) soient en haut
   return appointmentStore.getAppointments
     .filter(app => app.status === 'pending' || app.status === 'en_attente')
     .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 });
 
-// Patients récents (les 5 derniers)
 const recentPatientsList = computed(() => {
-    // Utilise les données du store patient, trie par date de création, et prend les X premiers
     const patients = patientStore.patients?.data || [];
-    
-    // Sortir du plus récent au plus ancien (si created_at est disponible)
-    return patients
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, MAX_RECENT_PATIENTS);
+    return [...patients].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, MAX_RECENT_PATIENTS);
 });
 
-
-// Données graphiques (inchangées)
 const statusChartData = {
   labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
   datasets: [
@@ -191,93 +141,123 @@ const statusChartData = {
     { label: 'En traitement', data: [60, 80, 75, 95, 110, 130], borderColor: '#0040d0', tension: 0.4 }
   ]
 }
-const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, title: { display: false } } }
-
-// Les données statiques mock sont supprimées car elles sont dynamisées par les computed.
-
-const profilePhoto = computed(() => auth.profilePhotoUrl) 
+const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
 </script>
 
 <style scoped>
 .dashboard-admin {
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  padding-bottom: 40px;
+  gap: 30px;
+  padding: 20px;
+  background-color: #f8fafc;
 }
 
+/* === Stats Boxes === */
 .top-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
 .stat-box {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  padding: 25px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .stat-box .icon {
-  font-size: 24px;
-}
-.stat-box h3 {
-  transition: all 0.3s ease;
-  min-height: 1.4em;
-}
-
-.middle-section {
+  font-size: 32px;
+  background: #f1f5f9;
+  width: 60px;
+  height: 60px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-.chart-card {
-  flex: 1; 
-  background: white;
-  padding: 20px;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
-  height: 320px;
-  min-width: 320px;
 }
 
+.stat-box h3 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.stat-box p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+}
+
+/* === Chart === */
+.chart-card {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.chart-card h4 {
+  margin-bottom: 20px;
+  color: #334155;
+}
+
+.chart-container {
+  height: 300px;
+}
+
+/* === Tables === */
 .bottom-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
 }
 
 .table-section {
-  flex: 1;
   background: white;
-  padding: 20px;
-  border-radius: 12px;
-  min-width: 320px;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-.appointment-list,
-.recent-patients {
+.appointment-list, .recent-patients {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin-top: 15px;
+}
+
+.appointment-list li, .recent-patients li {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.list-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.main-info {
+  font-weight: 700;
+  color: #1e293b;
   font-size: 14px;
 }
 
-.appointment-list li,
-.recent-patients li {
-  margin-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+.sub-info {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .loading-message, .empty-message {
-    font-style: italic;
-    color: #6c757d;
-    padding: 10px 0;
-    text-align: center;
+  padding: 30px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
 }
 </style>

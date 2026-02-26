@@ -1,67 +1,254 @@
 <template>
-  <AppLayout>
-    <div class="nurse-layout">
-      <aside class="sidebar">
-        <nav>
-          <RouterLink
-            v-for="item in menu"
-            :key="item.label"
-            :to="item.to"
-            class="nav-link"
-          >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
-      </aside>
+  <div class="nurse-layout" :class="{ 'sidebar-collapsed': isCollapsed, 'mobile-open': isMobileOpen }">
+    <div v-if="isMobileOpen" class="mobile-overlay" @click="isMobileOpen = false"></div>
 
-      <div class="main">
+    <aside class="sidebar no-print">
+      <div class="sidebar-header">
+        <div class="logo-area">
+          <div class="logo-icon">H</div>
+          <span class="logo-text" v-if="!isCollapsed">NurseDashboard</span>
+        </div>
+        <button class="collapse-btn" @click="isCollapsed = !isCollapsed">
+          <ChevronLeft v-if="!isCollapsed" :size="18" />
+          <ChevronRight v-else :size="18" />
+        </button>
+      </div>
+
+      <nav class="nav-menu">
+        <RouterLink
+          v-for="item in menu"
+          :key="item.label"
+          :to="{ name: item.routeName, params: { id: nurseId } }"
+          class="nav-link"
+          @click="isMobileOpen = false"
+        >
+          <component :is="item.icon" class="nav-icon" :size="22" />
+          <span class="nav-text" v-if="!isCollapsed">{{ item.label }}</span>
+        </RouterLink>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" @click="handleLogout">
+          <LogOut :size="20" />
+          <span class="nav-text" v-if="!isCollapsed">Déconnexion</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="content-header no-print">
+        <div class="header-left">
+          <button class="menu-toggle" @click="isMobileOpen = true">
+            <Menu :size="24" />
+          </button>
+          <h2 class="page-title">{{ currentPageLabel }}</h2>
+        </div>
+        <div class="header-right">
+          <div class="date-chip">
+            <Calendar :size="16" />
+            <span>{{ currentDateTime }}</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-body">
         <slot />
       </div>
-    </div>
-  </AppLayout>
+    </main>
+  </div>
 </template>
 
 <script setup>
-import AppLayout from '@/layouts/AppLayout.vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { useUserStore } from '@/stores/userStore' // Import maintenu si vous l'utilisiez
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
+import { 
+  LayoutDashboard, Users, Activity, FileText, 
+  ChevronLeft, ChevronRight, Menu, Calendar, LogOut, UserCircle 
+} from 'lucide-vue-next'
 
-// --- GESTION DE L'ID DE L'INFIRMIER (CORRIGÉE) ---
 const route = useRoute()
-const userStore = useUserStore() // Si vous ne voulez pas du UserStore, retirez cette ligne.
+const router = useRouter()
+const userStore = useUserStore()
 
-// 🔑 CORRECTION CRITIQUE : Récupère l'ID à partir des clés 'idNurse' ou 'id',
-// avec un fallback sur le store si nécessaire. Cela résout l'erreur "Missing required param id".
-const nurseId = route.params.idNurse || route.params.id || userStore.nurseProfile?.id
-// Si vous n'utilisez pas de store, utilisez la version simplifiée :
-// const nurseId = route.params.idNurse || route.params.id
+const isCollapsed = ref(false)
+const isMobileOpen = ref(false)
 
+// On récupère l'ID du nurse de façon sécurisée (Store ou URL)
+const nurseId = computed(() => {
+  return route.params.id || userStore.nurseProfile?.id || route.params.idNurse
+})
 
-// 2. Définition du menu avec les objets de route complets
 const menu = [
-  // Dashboard attend l'ID sous la clé 'id'
-  { label: 'Dashboard', to: { name: 'NurseDashboard', params: { id: nurseId } } },
-
-  // PatientList attend l'ID sous la clé 'id'
-  { label: 'PatientList', to: { name: 'PatientList', params: { id: nurseId } } },
-
-  // Les autres liens nécessitant l'ID infirmier
-  { label: 'ActivityReport', to: { name: 'ActivityReport', params: { id: nurseId } } },
-  { label: 'NoticeBoard', to: { name: 'NoticeBoard', params: { id: nurseId } } },
-  { label: 'NurseProfile', to: { name: 'NurseProfile', params: { id: nurseId } } },
-
-  // Liens qui ne peuvent pas être dynamiques dans le menu (sans ID patient connu)
-  { label: 'VitalSignsForm', to: { name: 'VitalSignsForm', params: { id: nurseId } } },
-  // { label: 'CareNotes', to: { name: 'CareNotes', params: { id: nurseId } } },
+  { label: 'Tableau de bord', icon: LayoutDashboard, routeName: 'NurseDashboard' },
+  { label: 'Patients', icon: Users, routeName: 'PatientList' },
+  { label: 'Signes Vitaux', icon: Activity, routeName: 'VitalSignsForm' },
+  { label: 'Rapports', icon: FileText, routeName: 'ActivityReport' },
+  { label: 'Profil', icon: UserCircle, routeName: 'NurseProfile' },
 ]
+
+const handleLogout = () => {
+  if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
+    router.push({ name: 'Login' })
+  }
+}
+
+const currentPageLabel = computed(() => {
+  const currentItem = menu.find(item => route.name === item.routeName)
+  return currentItem ? currentItem.label : 'Détails'
+})
+
+const currentDateTime = new Date().toLocaleDateString('fr-FR', {
+  day: 'numeric', month: 'short'
+})
 </script>
 
 <style scoped>
-/* Styles inchangés */
-.nurse-layout { display: flex; min-height: 100vh; }
-.sidebar { width: 220px; background-color: #ffffff; padding: 20px; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05); }
-.nav-link { display: block; padding: 10px 14px; margin-bottom: 8px; text-decoration: none; color: #333; border-radius: 5px; font-weight: 500; transition: background 0.3s; }
-.nav-link.router-link-active { background-color: #0040d0; color: #ffffff; }
-.nav-link:hover:not(.router-link-active) { background-color: #f0f0f0; }
-.main { flex: 1; padding: 32px; background: #f7f9fc; }
+.nurse-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #f8fafc;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.sidebar-collapsed .sidebar {
+  width: 80px;
+  min-width: 80px;
+}
+
+.sidebar-header {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nav-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 12px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 4px;
+  color: #64748b;
+  text-decoration: none;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.nav-link:hover { background: #f1f5f9; color: #0040d0; }
+.router-link-active { background: #eff6ff; color: #0040d0; font-weight: 600; }
+
+.sidebar-footer {
+  padding: 20px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background-color: #fff1f2;
+  color: #e11d48;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Empêche l'éclatement du layout par les tableaux */
+}
+
+.content-header {
+  height: 70px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.page-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #1e293b;
+}
+
+/* RESPONSIVE LOGIC */
+@media (max-width: 1024px) {
+  .menu-toggle {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -260px; /* Caché par défaut */
+    height: 100vh;
+  }
+
+  .mobile-open .sidebar {
+    left: 0; /* Apparaît au clic burger */
+  }
+
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 90;
+  }
+  
+  .sidebar-collapsed .sidebar {
+    left: -80px; /* Cache aussi la version réduite sur mobile */
+  }
+}
+
+.logo-icon {
+  background: #0040d0;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.logo-area { display: flex; align-items: center; gap: 10px; }
+
+@media print { .no-print { display: none !important; } }
 </style>

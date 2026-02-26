@@ -290,3 +290,23 @@ export const apiGetFirstResponderByUserId = async (userId) => {
         throw new Error(error.response?.data?.message || `Échec de la récupération de l'Urgentiste pour l'utilisateur ${userId}.`);
     }
 };
+/**
+ * Récupère le profil Technicien de Laboratoire complet associé à un ID utilisateur.
+ * @param {number} userId L'ID de l'utilisateur.
+ * @returns {Promise<object>} L'objet Technicien { id: lab_technician_id, user_id: userId, ...}.
+ */
+export const apiGetLabTechnicianByUserId = async (userId) => {
+    try {
+        console.log(`Calling API to get Lab Technician by user ID: ${userId}`);
+
+        // 🔑 Utilisation de la route /lab/by-user/{userId} que nous avons définie pour Laravel
+        const response = await API.get(`/lab/by-user/${userId}`);
+
+        // Le backend renvoie { lab_technician: {...} } d'après la méthode showByUser du contrôleur
+        return response.data.lab_technician;
+
+    } catch (error) {
+        console.error(`Erreur lors du chargement du technicien par ID utilisateur ${userId} (API):`, error);
+        throw new Error(error.response?.data?.message || `Échec de la récupération du technicien pour l'utilisateur ${userId}.`);
+    }
+};

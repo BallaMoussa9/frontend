@@ -1,129 +1,122 @@
 <template>
   <MedecinLayout>
-    <div class="rendezvous-container">
-      <h1>Rendez-vous du jour</h1>
-      <p class="date-header">Aujourd'hui, {{ todayDisplay }}</p>
-
-      <!-- Messages d'erreur/succès -->
-      <div v-if="appointmentStore.error" class="message-box error">
-        {{ appointmentStore.error }}
-      </div>
-      <div v-if="appointmentStore.success" class="message-box success">
-        {{ appointmentStore.success }}
-      </div>
-
-      <!-- État de chargement -->
-      <div v-if="userStore.loading || appointmentStore.loading" class="loading-state">
-        <p>Chargement des rendez-vous...</p>
-      </div>
-
-      <!-- Erreur de profil docteur -->
-      <div v-else-if="userStore.error" class="message-box error">
-        ❌ {{ userStore.error }}
-        <button @click="retryLoading" class="retry-btn">Réessayer</button>
-      </div>
-
-      <!-- Aucun profil docteur -->
-      <div v-else-if="!userStore.currentDoctorProfile" class="no-appointments">
-        <div class="no-profile-icon">👨‍⚕️</div>
-        <h3>Profil docteur non configuré</h3>
-        <p>Votre profil docteur n'a pas été trouvé. Veuillez contacter l'administration.</p>
-        <button @click="retryLoading" class="retry-btn large">Réessayer</button>
-      </div>
-
-      <!-- Liste des rendez-vous -->
-      <div v-else-if="filteredAppointments.length > 0" class="appointments-list">
-        <div class="appointments-header">
-          <h2>Vos rendez-vous du jour ({{ filteredAppointments.length }})</h2>
+    <div class="rendezvous-page">
+      <div class="rendezvous-content">
+        <header class="page-header">
+          <div class="header-left">
+            <h1>Rendez-vous du jour</h1>
+            <p class="date-subtitle">{{ todayDisplay }}</p>
+          </div>
           <button @click="refreshAppointments" class="btn-refresh" :disabled="appointmentStore.loading">
-            🔄 Actualiser
+            <span v-if="!appointmentStore.loading">🔄 Actualiser</span>
+            <span v-else>Chargement...</span>
           </button>
+        </header>
+
+        <div v-if="appointmentStore.error" class="alert error">
+          <span class="icon">⚠️</span> {{ appointmentStore.error }}
+        </div>
+        <div v-if="appointmentStore.success" class="alert success">
+          <span class="icon">✅</span> {{ appointmentStore.success }}
         </div>
 
-        <div v-for="appointment in filteredAppointments" :key="appointment.id" class="appointment-card">
-          <div class="card-header">
-            <div class="patient-info">
-              <div class="patient-avatar">
-                {{ getInitials(appointment.patient?.user?.first_name, appointment.patient?.user?.last_name) }}
-              </div>
-              <div>
-                <h3>
-                  {{ appointment.patient?.user?.first_name || 'Patient' }}
-                  {{ appointment.patient?.user?.last_name || 'Inconnu' }}
-                </h3>
-                <p class="appointment-type">{{ getAppointmentTypeLabel(appointment.type) }}</p>
-              </div>
-            </div>
-            <span :class="['status-tag', appointment.status]">
-              {{ formatStatus(appointment.status) }}
-            </span>
+        <div v-if="userStore.loading || appointmentStore.loading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Mise à jour de votre agenda...</p>
+        </div>
+
+        <div v-else-if="userStore.error" class="error-state">
+          <div class="error-icon">❌</div>
+          <h3>Erreur de chargement</h3>
+          <p>{{ userStore.error }}</p>
+          <button @click="retryLoading" class="btn-primary">Réessayer</button>
+        </div>
+
+        <div v-else-if="!userStore.currentDoctorProfile" class="error-state">
+          <div class="error-icon">👨‍⚕️</div>
+          <h3>Profil non configuré</h3>
+          <p>Impossible de récupérer vos informations de praticien.</p>
+          <button @click="retryLoading" class="btn-primary">Réessayer</button>
+        </div>
+
+        <div v-else-if="filteredAppointments.length > 0" class="appointments-container">
+          <div class="list-summary">
+            Vous avez <strong>{{ filteredAppointments.length }}</strong> rendez-vous prévus aujourd'hui.
           </div>
 
-          <div class="card-body">
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-icon">⏰</span>
-                <span class="info-text">{{ formatAppointmentTime(appointment.appointment_time) }}</span>
+          <div class="appointments-grid">
+            <div v-for="appointment in filteredAppointments" :key="appointment.id" class="appointment-card" :class="appointment.status">
+              <div class="card-main">
+                <div class="patient-profile">
+                  <div class="avatar">
+                    {{ getInitials(appointment.patient?.user?.first_name, appointment.patient?.user?.last_name) }}
+                  </div>
+                  <div class="details">
+                    <h3>{{ appointment.patient?.user?.first_name }} {{ appointment.patient?.user?.last_name }}</h3>
+                    <span class="type-badge">{{ getAppointmentTypeLabel(appointment.type) }}</span>
+                  </div>
+                </div>
+                <div class="status-box">
+                  <span :class="['status-tag', appointment.status]">
+                    {{ formatStatus(appointment.status) }}
+                  </span>
+                </div>
               </div>
-              <div class="info-item">
-                <span class="info-icon">📅</span>
-                <span class="info-text">{{ formatAppointmentDate(appointment.appointment_date) }}</span>
+
+              <div class="card-info">
+                <div class="info-item">
+                  <span class="label">Heure</span>
+                  <span class="value">⏰ {{ formatAppointmentTime(appointment.appointment_time) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Téléphone</span>
+                  <span class="value">📞 {{ appointment.patient?.user?.phone || 'Non renseigné' }}</span>
+                </div>
+                <div class="info-item full">
+                  <span class="label">Motif de consultation</span>
+                  <p class="value motif">{{ appointment.motif || 'Aucun motif spécifié' }}</p>
+                </div>
               </div>
-              <div class="info-item">
-                <span class="info-icon">📞</span>
-                <span class="info-text">{{ appointment.patient?.user?.phone || 'Non renseigné' }}</span>
-              </div>
-              <div class="info-item full-width">
-                <span class="info-icon">🎯</span>
-                <span class="info-text">{{ appointment.motif || 'Aucun motif spécifié' }}</span>
+
+              <div class="card-footer">
+                <button
+                  v-if="appointment.status === 'pending'"
+                  @click="updateStatus(appointment.id, 'confirmed')"
+                  class="btn-action confirm"
+                  :disabled="appointmentStore.loading"
+                >✓ Confirmer</button>
+                
+                <button
+                  v-if="appointment.status === 'confirmed'"
+                  @click="updateStatus(appointment.id, 'completed')"
+                  class="btn-action complete"
+                  :disabled="appointmentStore.loading"
+                >✅ Terminer</button>
+
+                <button
+                  v-if="appointment.status !== 'completed' && appointment.status !== 'canceled'"
+                  @click="updateStatus(appointment.id, 'canceled')"
+                  class="btn-action cancel"
+                  :disabled="appointmentStore.loading"
+                >✕ Annuler</button>
               </div>
             </div>
-          </div>
-
-          <div class="card-actions">
-            <button
-              @click="updateStatus(appointment.id, 'confirmed')"
-              :disabled="appointment.status === 'confirmed' || appointment.status === 'completed' || appointmentStore.loading"
-              class="action-btn confirm"
-              v-if="appointment.status === 'pending'">
-              ✓ Confirmer
-            </button>
-            <button
-              @click="updateStatus(appointment.id, 'completed')"
-              :disabled="appointment.status === 'completed' || appointmentStore.loading"
-              class="action-btn complete"
-              v-if="appointment.status === 'confirmed'">
-              ✅ Terminer
-            </button>
-            <button
-              @click="updateStatus(appointment.id, 'canceled')"
-              :disabled="appointment.status === 'canceled' || appointment.status === 'completed' || appointmentStore.loading"
-              class="action-btn cancel"
-              v-if="appointment.status !== 'completed' && appointment.status !== 'canceled'">
-              ✕ Annuler
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Aucun rendez-vous -->
-      <div v-else class="no-appointments">
-        <div class="empty-icon">📅</div>
-        <h3>Aucun rendez-vous aujourd'hui</h3>
-        <p>Vous n'avez aucun rendez-vous planifié pour aujourd'hui.</p>
-        <div class="action-buttons">
-          <router-link to="/doctor/dashboard" class="back-link">
-            ← Retour au tableau de bord
-          </router-link>
-          <button @click="refreshAppointments" class="btn-refresh">
-            🔄 Actualiser
-          </button>
+        <div v-else class="empty-state">
+          <div class="empty-illustration">📅</div>
+          <h3>Aucun rendez-vous aujourd'hui</h3>
+          <p>Votre agenda est vide pour le moment.</p>
+          <div class="empty-actions">
+            <router-link to="/doctor/dashboard" class="btn-outline">← Tableau de bord</router-link>
+            <button @click="refreshAppointments" class="btn-primary">Actualiser</button>
+          </div>
         </div>
       </div>
     </div>
   </MedecinLayout>
 </template>
-
 <script setup>
 import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -273,381 +266,230 @@ const getInitials = (firstName, lastName) => {
   return `${firstName[0]}${lastName[0]}`.toUpperCase()
 }
 </script>
-
 <style scoped>
-/* Conteneur principal */
-.rendezvous-container {
-  padding: 30px;
+.rendezvous-page {
   background-color: #f8fafc;
   min-height: 100vh;
+  width: 100%;
+  padding: 20px;
 }
 
-h1 {
-  color: #1c325f;
-  margin-bottom: 5px;
-  font-size: 2em;
-  font-weight: 600;
+.rendezvous-content {
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
-.date-header {
-  color: #6c757d;
-  font-size: 1.1em;
-  margin-bottom: 25px;
-}
-
-/* Header des rendez-vous */
-.appointments-header {
+/* Header */
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 30px;
 }
 
-.appointments-header h2 {
+.page-header h1 {
   color: #1c325f;
+  font-size: 24px;
   margin: 0;
-  font-size: 1.4em;
+  font-weight: 700;
 }
 
-.btn-refresh {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
+.date-subtitle {
+  color: #64748b;
+  margin: 5px 0 0 0;
 }
 
-.btn-refresh:hover:not(:disabled) {
-  background: #e9ecef;
-  border-color: #007aff;
-}
-
-.btn-refresh:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Messages de feedback */
-.message-box {
+/* Alertes */
+.alert {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
-  font-weight: 600;
-  border: 1px solid transparent;
+  font-weight: 500;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
+}
+.alert.error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.alert.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+/* Liste */
+.list-summary {
+  margin-bottom: 20px;
+  color: #475569;
 }
 
-.message-box.error {
-  background-color: #ffebee;
-  color: #d32f2f;
-  border-color: #ef9a9a;
-}
-
-.message-box.success {
-  background-color: #e8f5e9;
-  color: #388e3c;
-  border-color: #a5d6a7;
-}
-
-.retry-btn {
-  background: #007aff;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.retry-btn.large {
-  padding: 10px 20px;
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-/* Carte de rendez-vous */
-.appointments-list {
+.appointments-grid {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
+/* Card */
 .appointment-card {
   background: white;
-  padding: 24px;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border-left: 4px solid #007aff;
-  transition: all 0.2s;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 5px solid #cbd5e1;
+  transition: transform 0.2s;
 }
 
 .appointment-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateY(-2px);
+  transform: translateX(5px);
 }
 
-.appointment-card.online {
-  border-left-color: #34c759;
-}
+/* Couleurs de bordure selon statut */
+.appointment-card.confirmed { border-left-color: #34c759; }
+.appointment-card.pending { border-left-color: #ff9500; }
+.appointment-card.completed { border-left-color: #64748b; }
+.appointment-card.canceled { border-left-color: #ff3b30; }
 
-.appointment-card.urgent {
-  border-left-color: #ff3b30;
-}
-
-.card-header {
+.card-main {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
-.patient-info {
+.patient-profile {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.patient-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #007aff;
-  color: white;
+.avatar {
+  width: 48px;
+  height: 48px;
+  background: #e2e8f0;
+  color: #1c325f;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.patient-info h3 {
-  margin: 0 0 4px 0;
-  font-size: 1.3em;
-  color: #1c325f;
-  font-weight: 600;
-}
-
-.appointment-type {
-  margin: 0;
-  color: #666;
-  font-size: 0.9em;
-}
-
-/* Tags de statut */
-.status-tag {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.8em;
+  border-radius: 50%;
   font-weight: 700;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.status-tag.pending { background-color: #ff9500; }
-.status-tag.confirmed { background-color: #34c759; }
-.status-tag.canceled { background-color: #ff3b30; }
-.status-tag.completed { background-color: #6c757d; }
-.status-tag.rescheduled { background-color: #007aff; }
-.status-tag.scheduled { background-color: #9c27b0; }
-
-/* Corps de la carte */
-.card-body {
-  margin-bottom: 20px;
+.details h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1c325f;
 }
 
-.info-grid {
+.type-badge {
+  font-size: 12px;
+  color: #007aff;
+  font-weight: 500;
+}
+
+/* Info Grid */
+.card-info {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+.info-item.full { grid-column: 1 / -1; }
+
+.label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 4px;
 }
 
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.info-icon {
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-}
-
-.info-text {
-  color: #555;
-  font-size: 0.95em;
-}
-
-/* Actions des cartes */
-.card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85em;
+.value {
+  color: #1e293b;
   font-weight: 600;
-  transition: all 0.2s;
+}
+
+.motif {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Actions */
+.card-footer {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-action {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
-.action-btn.confirm {
-  background-color: #34c759;
-  color: white;
-}
+.btn-action.confirm { background: #34c759; color: white; }
+.btn-action.complete { background: #007aff; color: white; }
+.btn-action.cancel { background: #f1f5f9; color: #ff3b30; }
 
-.action-btn.complete {
-  background-color: #007aff;
-  color: white;
-}
+.btn-action:hover:not(:disabled) { opacity: 0.8; }
 
-.action-btn.cancel {
-  background-color: #ff3b30;
-  color: white;
-}
-
-.action-btn:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* État de non-rendez-vous */
-.no-appointments {
+/* États vides/Erreurs */
+.empty-state, .error-state {
   text-align: center;
-  padding: 60px 40px;
+  padding: 60px 20px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.empty-icon {
-  font-size: 64px;
+.empty-illustration, .error-icon {
+  font-size: 50px;
   margin-bottom: 20px;
-  opacity: 0.5;
 }
 
-.no-appointments h3 {
-  color: #1c325f;
-  margin-bottom: 12px;
-  font-size: 1.4em;
-}
-
-.no-appointments p {
-  color: #666;
-  font-size: 1.1em;
-  margin-bottom: 25px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.back-link {
+.btn-primary {
   background: #007aff;
   color: white;
-  padding: 10px 20px;
-  border-radius: 6px;
-  text-decoration: none;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
-.back-link:hover {
-  background: #0056cc;
+.btn-outline {
+  display: inline-block;
+  padding: 10px 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   text-decoration: none;
+  color: #64748b;
+  margin-right: 10px;
 }
 
-/* État de chargement */
-.loading-state {
+/* Statuts Tags */
+.status-tag {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-tag.pending { background: #fff7ed; color: #c2410c; }
+.status-tag.confirmed { background: #f0fdf4; color: #15803d; }
+.status-tag.completed { background: #f1f5f9; color: #475569; }
+.status-tag.canceled { background: #fef2f2; color: #b91c1c; }
+
+/* Loading */
+.loading-overlay {
   text-align: center;
   padding: 40px;
-  font-size: 1.1em;
-  color: #007aff;
 }
 
-/* Profil non trouvé */
-.no-profile-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .rendezvous-container {
-    padding: 20px 15px;
-  }
-
-  .appointments-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-
-  .card-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-actions {
-    flex-direction: column;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-btn {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .patient-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .patient-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
-  }
+@media (max-width: 640px) {
+  .card-info { grid-template-columns: 1fr; }
+  .card-footer { flex-direction: column; }
+  .btn-action { width: 100%; }
 }
 </style>

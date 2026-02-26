@@ -21,6 +21,7 @@ import {
     apiGetNurseByUserId,
     apiExportReport, // 🔑 NOUVEL IMPORT : Fonction API pour l'exportation de rapport
     apiGetFirstResponderByUserId,
+    apiGetLabTechnicianByUserId,
 } from "@/services/apiUser"; // Assurez-vous que apiExportReport est bien défini dans ce fichier ou un autre importé.
 
 export const useUserStore = defineStore('user', {
@@ -48,6 +49,7 @@ export const useUserStore = defineStore('user', {
         currentDoctorProfile: null,
         currentNurseProfile: null,
         currentFirstResponderProfile: null,
+        currentLabTechnicianProfile: null, // 🧪 NOUVEL ÉTAT pour le laborantin
         // Nouveaux états pour la gestion des rôles et départements
         availableRoles: [],
         availableDepartments: [],
@@ -107,6 +109,50 @@ export const useUserStore = defineStore('user', {
                 this.loading = false;
             }
         },
+      /**
+ * 🧪 ACTION MODIFIÉE : Récupère l'ID du laborantin.
+ * Si l'ID est déjà présent dans l'objet utilisateur, on l'utilise directement 
+ * pour éviter l'erreur 404 de l'appel API.
+ */
+async fetchLabTechnicianByUserId(userId) {
+    this.loading = true;
+    this.clearFeedback();
+    
+    try {
+        console.log(`UserStore: Récupération de l'ID laborantin pour l'utilisateur ID: ${userId}`);
+
+        // 1. Vérification locale (currentUser est rempli au login)
+        // Note: Assure-toi que dans authStore, tu as bien setté userStore.currentUser = user
+        if (this.currentUser && (this.currentUser.lab_technician_id || this.currentUser.id === userId)) {
+            const idMetier = this.currentUser.lab_technician_id;
+            if (idMetier) {
+                console.log("UserStore: ID trouvé localement:", idMetier);
+                return idMetier;
+            }
+        }
+
+        // 2. Appel API si pas trouvé localement
+        try {
+            const dataLab = await apiGetLabTechnicianByUserId(userId);
+            this.currentLabTechnicianProfile = dataLab;
+            return dataLab.id; // On retourne l'id de l'objet renvoyé par l'API
+        } catch (apiError) {
+            console.warn("UserStore: API indisponible, vérification finale des données de session.");
+            if (this.currentUser && this.currentUser.lab_technician_id) {
+                return this.currentUser.lab_technician_id;
+            }
+            throw apiError;
+        }
+
+    } catch (error) {
+        // C'est ici que l'erreur "response is not defined" arrivait si on mélangeait les variables
+        this.setError(`Profil laborantin non trouvé.`);
+        console.error("UserStore Error:", error.message);
+        return null; 
+    } finally {
+        this.loading = false;
+    }
+},
         async fetchResponsibleUsers() {
             this.loading = true;
             this.clearFeedback();
@@ -441,7 +487,7 @@ export const useUserStore = defineStore('user', {
         // Getters pour les rôles et départements
         getAvailableRoles: (state) => state.availableRoles,
         getAvailableDepartments: (state) => state.availableDepartments,
-
+        getCurrentLabTechnicianProfile: (state) => state.currentLabTechnicianProfile, // 🧪 Getter pour le laborantin
         // Getters pour le profil de l'utilisateur connecté
         getCurrentUser: (state) => state.currentUser,
         isCurrentUserLoggedIn: (state) => !!state.currentUser,

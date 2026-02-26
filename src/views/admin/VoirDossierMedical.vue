@@ -1,67 +1,108 @@
 <template>
   <AdminLayout>
-    <div class="dossier-medical">
+    <div class="dossier-medical-wrapper">
+      <header class="page-header">
+        <div class="title-section">
+          <button @click="goBack" class="btn-back" title="Retour">
+            <span class="arrow">←</span>
+          </button>
+          <div class="header-text">
+            <h2 v-if="currentPatient">Dossier de {{ patientFullName }}</h2>
+            <h2 v-else>Dossier Médical</h2>
+            <p class="subtitle" v-if="currentPatient">Patient ID: #{{ currentPatient.id }}</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-print" @click="handlePrint">🖨️ Imprimer</button>
+        </div>
+      </header>
 
-      <div v-if="loading" class="loading-message">
-        ⏳ Chargement du dossier médical...
-      </div>
-      <div v-else-if="patientStore.error" class="error-message">
-        ❌ Erreur de chargement du patient : {{ patientStore.error }}
-      </div>
-      <div v-else-if="!currentPatient" class="no-data-message">
-        Patient introuvable avec l'ID #{{ route.params.id }}.
+      <div v-if="loading" class="state-container loading">
+        <div class="spinner"></div>
+        <p>Chargement du dossier médical...</p>
       </div>
 
-      <div v-else>
-        <h2>Dossier médical de {{ patientFullName }}</h2>
+      <div v-else-if="patientStore.error" class="state-container error">
+        <div class="icon">❌</div>
+        <p>Erreur : {{ patientStore.error }}</p>
+      </div>
 
-        <div class="section summary-section">
+      <div v-else-if="!currentPatient" class="state-container empty">
+        <div class="icon">🔍</div>
+        <p>Patient introuvable avec l'ID #{{ route.params.id }}.</p>
+      </div>
+
+      <div v-else class="dossier-content">
+        
+        <div class="info-card vital-card">
           <h3>Informations Clés</h3>
-          <p><strong>Sexe :</strong> {{ currentPatient.user?.genre || 'N/A' }}</p>
-          <p><strong>Date de naissance :</strong> {{ currentPatient.user?.birth_date || 'N/A' }}</p>
-          <p><strong>Groupe sanguin :</strong> {{ currentPatient.group_sanguine || 'N/A' }}</p>
-          <p><strong>Conditions Chroniques :</strong> {{ currentPatient.maladies_chroniques || 'Aucune' }}</p>
+          <div class="grid-details">
+            <div class="detail-item">
+              <span class="label">Sexe</span>
+              <span class="value">{{ currentPatient.user?.genre || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Date de naissance</span>
+              <span class="value">{{ currentPatient.user?.birth_date || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Groupe sanguin</span>
+              <span class="value blood-type">{{ currentPatient.group_sanguine || 'N/A' }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="label">Conditions Chroniques</span>
+              <span class="value condition-pill">{{ currentPatient.maladies_chroniques || 'Aucune enregistrée' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <section class="medical-section">
+          <div class="section-header">
+            <h3>Ordonnances ({{ prescriptionStore.getPrescriptions.length }})</h3>
           </div>
 
-        <div class="section prescription-section">
-          <h3>Ordonnances ({{ prescriptionStore.getPrescriptions.length }})</h3>
+          <div v-if="prescriptionStore.isLoading" class="inner-loading">
+            Chargement des ordonnances...
+          </div>
+          
+          <div v-else-if="!prescriptionStore.getPrescriptions.length" class="empty-state-mini">
+            <p>Aucune ordonnance n'est enregistrée pour ce patient.</p>
+          </div>
 
-          <p v-if="prescriptionStore.isLoading" class="text-info">Chargement des ordonnances...</p>
-          <p v-else-if="!prescriptionStore.getPrescriptions.length" class="text-info">
-            Aucune ordonnance trouvée pour ce patient.
-          </p>
-
-          <ul v-else class="prescription-list">
-            <li v-for="rx in prescriptionStore.getPrescriptions" :key="rx.id" class="prescription-item">
-              <div class="header-info">
-                📅 <strong>Ordonnance du {{ rx.date_prescription ? new Date(rx.date_prescription).toLocaleDateString() : 'Date Inconnue' }}</strong>
-                (Statut: **{{ rx.status }}**)
+          <div v-else class="prescription-grid">
+            <div v-for="rx in prescriptionStore.getPrescriptions" :key="rx.id" class="rx-card">
+              <div class="rx-header">
+                <div class="date-tag">
+                  📅 {{ rx.date_prescription ? new Date(rx.date_prescription).toLocaleDateString('fr-FR') : 'Date Inconnue' }}
+                </div>
+                <span :class="['status-pill', rx.status]">
+                  {{ rx.status }}
+                </span>
               </div>
 
-              <div class="detail-content">
-                  <p>Médecin: **Dr. {{ rx.doctor?.user?.last_name || 'Inconnu' }}**</p>
-
-                  <div v-if="rx.prescription_lines && rx.prescription_lines.length">
-                      <p class="detail-title">Lignes d'ordonnance :</p>
-                      <ul class="lines-detail">
-                          <li v-for="(line, index) in rx.prescription_lines" :key="line.id || index">
-                              💊 **{{ line.medication_name || 'Médicament N/A' }}**
-                              ({{ line.dosage || 'Dosage N/A' }}) - {{ line.frequency || 'Fréquence N/A' }}
-                              <br>
-                              *Instruction :* {{ line.instructions || 'Aucune instruction' }}
-                          </li>
-                      </ul>
+              <div class="rx-body">
+                <p class="doctor-name">Prescrit par <strong>Dr. {{ rx.doctor?.user?.last_name || 'Inconnu' }}</strong></p>
+                
+                <div v-if="rx.prescription_lines?.length" class="medication-list">
+                  <div v-for="(line, index) in rx.prescription_lines" :key="line.id || index" class="med-item">
+                    <div class="med-icon">💊</div>
+                    <div class="med-info">
+                      <p class="med-name">{{ line.medication_name }} <span class="dosage">({{ line.dosage }})</span></p>
+                      <p class="med-usage">{{ line.frequency }} — {{ line.instructions }}</p>
+                    </div>
                   </div>
+                </div>
               </div>
+            </div>
+          </div>
+        </section>
 
-            </li>
-          </ul>
-        </div>
-
-        <div class="section">
-          <h3>Historique général (à remplacer par Consultations/Rapports)</h3>
-          <p class="text-info">Cette section sera remplacée par les données des consultations et des rapports médicaux.</p>
-        </div>
+        <section class="medical-section placeholder-section">
+          <h3>Historique Médical & Consultations</h3>
+          <div class="coming-soon">
+            <p>Cette section sera alimentée par les futurs rapports de consultations.</p>
+          </div>
+        </section>
       </div>
     </div>
   </AdminLayout>
@@ -69,137 +110,190 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-
-// Import des stores nécessaires
 import { usePatientStore } from '@/stores/patientStore'
 import { usePrescriptionStore } from '@/stores/prescriptionStore'
-// Nous aurions besoin de useMedicalRecordStore pour les Allergies, mais nous allons utiliser les données disponibles sur Patient pour l'instant.
 
 const route = useRoute()
+const router = useRouter() // Requis pour router.back()
 
-// Initialisation des stores
 const patientStore = usePatientStore()
 const prescriptionStore = usePrescriptionStore()
 
-// Récupération des états réactifs
 const { currentPatient, loading: isPatientLoading } = storeToRefs(patientStore)
 const loading = computed(() => isPatientLoading.value || prescriptionStore.isLoading)
 
-// --------------------------------------------------------
-// 🧠 Computed Properties
-// --------------------------------------------------------
+// --- LOGIQUE DE NAVIGATION ---
+const goBack = () => {
+  router.back()
+}
 
+const handlePrint = () => {
+  window.print()
+}
+
+// --- LOGIQUE DE DONNÉES ---
 const patientFullName = computed(() => {
   const user = currentPatient.value?.user
   return user ? `${user.first_name} ${user.last_name}` : 'Patient Inconnu'
 })
 
-// --------------------------------------------------------
-// 🧩 Chargement des données
-// --------------------------------------------------------
-
 const loadPatientAndPrescriptions = async (id) => {
-  if (!id || isNaN(id)) {
-    patientStore.setError('ID de patient non valide.');
-    return;
-  }
-
-  // 1. Charger les données du patient
+  if (!id || isNaN(id)) return;
   await patientStore.onePatient(id);
-
-  // 2. Charger les ordonnances du patient
   await prescriptionStore.fetchPatientPrescriptions(id);
 }
 
-// --------------------------------------------------------
-// 🔁 Watch route params & Initial load
-// --------------------------------------------------------
-
 watch(() => route.params.id, (newId) => {
   const id = parseInt(newId);
-  if (id && id > 0) {
-    loadPatientAndPrescriptions(id);
-  } else {
-    patientStore.setError('ID de patient manquant ou non valide dans l’URL.');
-  }
+  if (id) loadPatientAndPrescriptions(id);
 }, { immediate: true })
-
 </script>
 
 <style scoped>
-.dossier-medical {
-  max-width: 800px;
-  margin: auto;
-  padding: 32px;
+.dossier-medical-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 30px;
 }
-.section {
+
+/* Header & Retour */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.btn-back {
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s ease;
 }
-.summary-section {
-    border-left: 4px solid #007bff;
-    background-color: #f7f9ff;
+
+.btn-back:hover {
+  background: #f1f5f9;
+  transform: translateX(-4px);
+  border-color: #cbd5e1;
 }
-h2 {
-    color: #002580;
-    margin-bottom: 25px;
-    border-bottom: 2px solid #0040d0;
-    padding-bottom: 10px;
+
+.header-text h2 { margin: 0; color: #1e293b; font-size: 26px; font-weight: 800; }
+.subtitle { margin: 0; color: #64748b; font-size: 14px; }
+
+.btn-print {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
 }
-h3 {
-    color: #0040d0;
-    margin-top: 0;
-    margin-bottom: 15px;
+
+/* Info Card Style */
+.info-card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
 }
-.loading-message, .error-message, .no-data-message, .text-info {
-    text-align: center;
-    padding: 15px;
-    border-radius: 6px;
-    font-weight: 600;
+
+.info-card h3 { margin-top: 0; color: #0040d0; font-size: 18px; margin-bottom: 20px; }
+
+.grid-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
 }
-.error-message {
-    color: #dc3545;
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
+
+.detail-item { display: flex; flex-direction: column; gap: 4px; }
+.detail-item .label { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-item .value { color: #1e293b; font-weight: 700; font-size: 15px; }
+
+.blood-type { color: #e11d48 !important; background: #fff1f2; padding: 2px 8px; border-radius: 6px; width: fit-content; }
+
+/* Ordonnances */
+.medical-section { margin-top: 40px; }
+.section-header { margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+
+.prescription-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
 }
-.prescription-list {
-    list-style: none;
-    padding: 0;
+
+.rx-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: transform 0.2s;
 }
-.prescription-item {
-    border: 1px solid #e0e0e0;
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    background-color: #ffffff;
-    border-left: 5px solid #28a745; /* Vert pour prescription */
+
+.rx-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+
+.rx-header {
+  padding: 15px 20px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
 }
-.header-info strong {
-    color: #28a745;
+
+.rx-body { padding: 20px; }
+.medication-list { display: flex; flex-direction: column; gap: 15px; }
+.med-item { display: flex; gap: 12px; }
+.med-name { font-weight: 700; color: #1e293b; margin: 0; }
+.med-usage { font-size: 12px; color: #64748b; margin: 2px 0; }
+
+/* Status Labels */
+.status-pill {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #64748b;
 }
-.lines-detail {
-    list-style: disc;
-    margin-left: 20px;
-    margin-top: 10px;
-    padding-left: 0;
+
+/* Spinner */
+.state-container { text-align: center; padding: 80px; }
+.spinner {
+  width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0040d0;
+  border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;
 }
-.lines-detail li {
-    background-color: transparent;
-    border: none;
-    padding: 4px 0;
-    margin-bottom: 2px;
-    font-size: 0.95em;
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.coming-soon {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  color: #94a3b8;
 }
-.detail-title {
-    font-weight: bold;
-    color: #555;
-    margin-top: 10px;
-    margin-bottom: 5px;
+
+@media (max-width: 600px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+  .grid-details { grid-template-columns: 1fr; }
 }
 </style>
