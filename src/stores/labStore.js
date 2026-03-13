@@ -66,7 +66,39 @@ export const useLabStore = defineStore('lab', {
         this.setLoading(false);
       }
     },
-
+/**
+     * AJOUTE CETTE MÉTHODE ICI
+     * Met à jour le statut d'une demande d'analyse et synchronise le store.
+     */
+    async updateLabRequestStatus(requestId, status) {
+      this.clearMessages();
+      this.setLoading(true);
+      try {
+        // Appelle ton service API existant
+        const result = await apiLab.updateLabRequestStatus(requestId, status);
+        
+        // Ton API renvoie { message: ..., lab_request: ... }
+        const updatedAnalyse = result.lab_request;
+        
+        if (updatedAnalyse) {
+          const index = this.labRequests.findIndex(req => Number(req.id) === Number(requestId));
+          
+          if (index !== -1) {
+            // Mise à jour réactive de la liste dans le store
+            this.labRequests.splice(index, 1, updatedAnalyse);
+            this.setSuccess('Statut mis à jour avec succès.');
+            return true;
+          }
+        }
+        return false;
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || err.message;
+        this.setError('Échec de la mise à jour: ' + errorMessage);
+        return false;
+      } finally {
+        this.setLoading(false);
+      }
+    },
     /**
      * Charge toutes les demandes d'analyses de laboratoire.
      * @param {object} [params={}] - Paramètres de filtrage (ex: { status: 'pending' })

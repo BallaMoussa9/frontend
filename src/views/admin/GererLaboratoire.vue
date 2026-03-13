@@ -10,9 +10,6 @@
       <div v-if="labTechnicianStore.error" class="error-message">
         {{ labTechnicianStore.error }}
       </div>
-      <div v-if="labTechnicianStore.success" class="success-message">
-        {{ labTechnicianStore.success }}
-      </div>
 
       <div class="table-container">
         <table class="lab-table">
@@ -21,7 +18,6 @@
               <th>#</th>
               <th>Nom complet</th>
               <th>Email</th>
-              <th>Téléphone</th>
               <th>Spécialité</th>
               <th>Laboratoire</th>
               <th>Status</th>
@@ -30,24 +26,21 @@
           </thead>
           <tbody>
             <tr v-for="(technician, index) in labTechnicianStore.labTechnicians" :key="technician.id">
+              <template v-if="logTechnician(technician, index)"></template>
+              
               <td>{{ index + 1 }}</td>
-              <td>{{ technician.user.first_name }} {{ technician.user.last_name }}</td>
-              <td>{{ technician.user.email }}</td>
-              <td>{{ technician.user.phone }}</td>
+              <td>{{ technician.user?.first_name }} {{ technician.user?.last_name }}</td>
+              <td>{{ technician.user?.email }}</td>
               <td>{{ technician.speciality }}</td>
-              <td>{{ technician.laboratory.name }}</td>
+              <td>{{ technician.laboratory?.name || 'Non assigné' }}</td>
               <td>
                 <span :class="getStatusClass(technician.status)">
                   {{ getStatusText(technician.status) }}
                 </span>
               </td>
               <td>
-                <button class="btn-edit" title="Modifier" @click="goEdit(technician.id)">
-                  ✏️
-                </button>
-                <button class="btn-delete" title="Supprimer" @click="goDelet(technician.id)">
-                  🗑
-                </button>
+                <button class="btn-edit" title="Modifier" @click="goEdit(technician.id)">✏️</button>
+                <button class="btn-delete" title="Supprimer" @click="goDelet(technician.id)">🗑</button>
               </td>
             </tr>
           </tbody>
@@ -59,62 +52,38 @@
 
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue' // Ajout de watch
 import { useRouter } from 'vue-router'
 import { useLabTechnicianStore } from '@/stores/labTechnicianStore'
 
 const router = useRouter()
 const labTechnicianStore = useLabTechnicianStore()
 
-// Charger les techniciens dès que le composant est monté
+// 1. Watcher pour voir quand les données arrivent dans le store
+watch(() => labTechnicianStore.labTechnicians, (newData) => {
+  console.log("DEBUG: Données reçues dans le store :", newData);
+}, { deep: true });
+
+// 2. Fonction de log appelée lors du rendu de chaque ligne
+const logTechnician = (tech, index) => {
+  console.log(`DEBUG: Rendu ligne ${index}`, tech);
+  return true; // Nécessaire pour le v-if dans le template
+};
+
 onMounted(() => {
   labTechnicianStore.fetchAllLabTechnicians()
 })
 
-const openAddLabTech = () => {
-  router.push({ name: 'AddUserLabTechnicians' })
-}
-
-const goEdit = (id) => {
-  router.push({ name: 'EditLabTech', params: { id: id } })
-}
-
+const openAddLabTech = () => { router.push({ name: 'AddUserLabTechnicians' }) }
+const goEdit = (id) => { router.push({ name: 'EditLabTech', params: { id: id } }) }
 const goDelet = async (id) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce technicien ?')) {
-    try {
-      await labTechnicianStore.deleteLabTechnician(id)
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error)
-    }
+    await labTechnicianStore.deleteLabTechnician(id)
   }
 }
 
-// Fonction pour formater le statut et appliquer une classe CSS
-const getStatusClass = (status) => {
-  switch (status) {
-    case 'active':
-      return 'badge-success'
-    case 'on_leave':
-      return 'badge-inactif'
-    case 'inactive':
-      return 'badge-inactif'
-    default:
-      return ''
-  }
-}
-
-const getStatusText = (status) => {
-  switch (status) {
-    case 'active':
-      return 'Actif'
-    case 'on_leave':
-      return 'En congé'
-    case 'inactive':
-      return 'Inactif'
-    default:
-      return status
-  }
-}
+const getStatusClass = (status) => status === 'active' ? 'badge-success' : 'badge-inactif'
+const getStatusText = (status) => status === 'active' ? 'Actif' : (status === 'on_leave' ? 'En congé' : 'Inactif')
 </script>
 
 <style scoped>
