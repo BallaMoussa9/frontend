@@ -86,7 +86,7 @@
                 <div v-if="analysis.resultats && analysis.resultats.length > 0">
                   <div v-for="res in analysis.resultats" :key="res.id" class="result-card">
                     <p><strong>Commentaires:</strong> {{ res.comments || 'Pas de commentaire' }}</p>
-                    <a :href="'http://localhost:8000/storage/' + res.result_file" 
+                    <a :href="'https://santeko.abdatytch.com/storage/' + res.result_file" 
                        target="_blank" 
                        class="btn-download">
                        📎 Télécharger le résultat (DOCX)

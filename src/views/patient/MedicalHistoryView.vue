@@ -64,7 +64,7 @@
               <div v-if="lab.resultats && lab.resultats.length > 0" class="results-area">
                 <div v-for="res in lab.resultats" :key="res.id" class="res-item">
                   <p>{{ res.comments }}</p>
-                  <a v-if="res.result_file" :href="'http://localhost:8000/storage/' + res.result_file" target="_blank" class="btn-download">
+                  <a v-if="res.result_file" :href="'https://santeko.abdatytch.com/storage/' + res.result_file" target="_blank" class="btn-download">
                     <i class="fas fa-download"></i> Télécharger
                   </a>
                 </div>
