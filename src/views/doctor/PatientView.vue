@@ -81,16 +81,27 @@
               <div v-if="prescriptionStore.isLoading" class="loading-text">Chargement...</div>
               <div v-else-if="patientPrescriptions.length > 0">
                 <div v-for="prescription in patientPrescriptions" :key="prescription.id" class="data-item">
-                  <div class="item-header">
-                    <strong>Ordonnance #{{ prescription.id }}</strong>
-                    <span>{{ formatDate(prescription.created_at) }}</span>
-                  </div>
-                  <ul class="med-list">
-                    <li v-for="(line, idx) in prescription.lines" :key="idx">
-                      🔹 {{ line.medicament_name }} ({{ line.dosage }})
-                    </li>
-                  </ul>
+                <div class="item-header">
+                  <strong>Ordonnance #{{ prescription.id }}</strong>
+                  <span>{{ formatDate(prescription.created_at) }}</span>
                 </div>
+
+                <ul class="med-list">
+                  <li v-for="(line, idx) in prescription.lines" :key="idx">
+                    🔹 <strong>{{ line.medication_name }}</strong> : 
+                    {{ line.dosage }} | 
+                    Freq: {{ line.frequency }} | 
+                    Durée: {{ line.duration }}
+                    <div v-if="line.instructions" class="small-text">
+                      <em>Instruction : {{ line.instructions }}</em>
+                    </div>
+                  </li>
+                </ul>
+
+                <div v-if="prescription.notes" class="prescription-notes">
+                  <p><strong>Notes du médecin :</strong> {{ prescription.notes }}</p>
+                </div>
+              </div>
               </div>
               <p v-else class="empty-text">Aucune ordonnance.</p>
             </section>
@@ -98,12 +109,26 @@
             <section class="card-section">
               <h3>🔬 Laboratoire & Analyses</h3>
               <div v-if="labStore.isLoading" class="loading-text">Chargement...</div>
+              
               <div v-else-if="patientLabRequests.length > 0">
                 <div v-for="analysis in patientLabRequests" :key="analysis.id" class="data-item">
                   <div class="item-header">
-                    <strong>{{ analysis.type_of_analysis }}</strong>
-                    <span :class="getStatusClass(analysis.status)">{{ analysis.status }}</span>
+                    <strong>{{ analysis.name }}</strong> <span :class="getStatusClass(analysis.status)">{{ analysis.status }}</span>
                   </div>
+                  
+                  <div v-if="analysis.resultats && analysis.resultats.length > 0" class="analysis-content">
+                    <div v-for="res in analysis.resultats" :key="res.id">
+                      <p v-if="res.comments"><strong>Observations:</strong> {{ res.comments }}</p>
+                      
+                      <a :href="'http://localhost:8000/storage/' + res.result_file" 
+                        target="_blank" 
+                        class="btn-download">
+                        📎 Télécharger le résultat (DOCX)
+                      </a>
+                    </div>
+                  </div>
+                  <p v-else class="empty-text">Aucun résultat pour le moment.</p>
+                  
                   <p class="small-date">Demandé le {{ formatDate(analysis.created_at) }}</p>
                 </div>
               </div>
@@ -113,13 +138,15 @@
             <section class="card-section">
               <h3>📅 Historique des Visites</h3>
               <div v-if="consultationStore.loading" class="loading-text">Chargement...</div>
+              
               <div v-else-if="patientConsultations.length > 0">
                 <div v-for="consultation in patientConsultations" :key="consultation.id" class="data-item consultation">
                   <div class="item-header">
-                    <strong>{{ formatDate(consultation.start_date) }}</strong>
+                    <strong>{{ formatDate(consultation.appointment_date) }}</strong>
                     <span class="status-badge">{{ consultation.status }}</span>
+                    <span class="type-badge">{{ consultation.type }}</span>
                   </div>
-                  <p><em>Motif:</em> {{ consultation.reason_for_visit }}</p>
+                  <p><em>Motif:</em> {{ consultation.motif }}</p>
                 </div>
               </div>
               <p v-else class="empty-text">Aucun historique.</p>
@@ -186,15 +213,27 @@ async function selectPatient(patientId) {
         selectedPatient.value = patient
         loadingDme.value = true;
         
-        await Promise.all([
-            prescriptionStore.fetchPatientPrescriptions(patientId),
-            labStore.listLabRequests({ patient_id: patientId }),
-            consultationStore.fetchPatientConsultations(patientId)
-        ])
+        console.log("🔍 Sélection du patient :", patientId);
+        
+        try {
+            await Promise.all([
+                prescriptionStore.fetchPatientPrescriptions(patientId),
+                labStore.listLabRequests({ patient_id: patientId }),
+                consultationStore.fetchPatientConsultations(patientId)
+            ]);
+            
+            // LOGS DE VÉRIFICATION APRÈS APPEL
+            console.log("💊 Prescriptions reçues :", prescriptionStore.prescriptions);
+            console.log("🔬 Analyses reçues :", labStore.labRequests);
+            console.log("📅 Consultations reçues :", consultationStore.patientConsultations);
+            
+        } catch (error) {
+            console.error("❌ Erreur lors du chargement des données :", error);
+        }
+        
         loadingDme.value = false;
     }
 }
-
 const handleSearch = () => {
     clearTimeout(debounceTimeout)
     debounceTimeout = setTimeout(() => {

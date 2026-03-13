@@ -129,31 +129,28 @@ export const useLabStore = defineStore('lab', {
       }
     },
 
-    async updateLabRequestStatus(requestId, status) {
-  this.clearMessages();
+    // Dans ton store
+async uploadLabResults(requestId, formData) {
   this.setLoading(true);
   try {
-    const result = await apiLab.updateLabRequestStatus(requestId, status);
+    const result = await apiLab.uploadLabResults(requestId, formData);
     
-    // Vérification stricte de la réponse
-    if (result && result.lab_request) {
-      const index = this.labRequests.findIndex(req => Number(req.id) === Number(requestId));
-      
-      if (index !== -1) {
-        // On utilise splice pour garantir la réactivité de Vue
-        this.labRequests.splice(index, 1, result.lab_request);
-        this.setSuccess('Statut mis à jour localement');
-        return true;
-      }
+    // MISE À JOUR CIBLEE : On ne recharge pas tout, on met à jour uniquement l'analyse modifiée
+    // Cela permet aux autres composants qui utilisent 'labRequests' ou 'readyAnalyses' de rester synchronisés
+    const index = this.readyAnalyses.findIndex(req => Number(req.id) === Number(requestId));
+    if (index !== -1) {
+      this.readyAnalyses.splice(index, 1); // Retire l'analyse traitée de la liste
     }
-    return false;
+    
+    this.setSuccess('Résultats enregistrés.');
+    return true;
   } catch (err) {
-    this.setError(err.message);
+    this.setError('Erreur lors de l\'enregistrement.');
     return false;
   } finally {
     this.setLoading(false);
   }
-}, 
+},
 
     /**
      * Télécharge les résultats d'analyse pour une demande spécifique.

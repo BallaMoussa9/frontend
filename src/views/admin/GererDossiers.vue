@@ -38,7 +38,6 @@
               <tr>
                 <th>#</th>
                 <th>Patient</th>
-                <th>Médecin référent</th>
                 <th>Date création</th>
                 <th>Statut</th>
                 <th class="text-right">Actions</th>
@@ -50,28 +49,33 @@
                 <td>
                   <div class="patient-cell">
                     <span class="name">{{ record.patient_name }}</span>
-                    <span class="ref">REF: #{{ record.id }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="doctor-cell">
-                    <span class="doctor-tag">Dr.</span> {{ record.doctor_name }}
+                    <span class="ref">DOSSIER: #{{ record.id }} | PATIENT: #{{ record.true_patient_id }}</span>
                   </div>
                 </td>
                 <td class="date-cell">{{ formatDate(record.created_at) }}</td>
                 <td>
                   <span :class="['status-pill', record.status === 'complet' ? 'complet' : 'en-cours']">
-                    {{ record.status }}
+                    {{ record.status || 'En attente' }}
                   </span>
                 </td>
                 <td class="text-right">
                   <div class="action-group">
-                    <RouterLink :to="{ name: 'SeenDossiert', params: { id: record.id } }" class="btn-view" title="Consulter">
+                    <RouterLink 
+                      :to="{ name: 'SeenDossiert', params: { id: record.true_patient_id } }" 
+                      class="btn-view" 
+                      title="Consulter le patient"
+                    >
                       👁️
                     </RouterLink>
-                    <RouterLink :to="{ name: 'EditMedicalRecord', params: { id: record.id } }" class="btn-edit" title="Modifier">
+                    
+                    <RouterLink 
+                      :to="{ name: 'EditMedicalRecord', params: { id: record.id } }" 
+                      class="btn-edit" 
+                      title="Modifier le dossier"
+                    >
                       ✏️
                     </RouterLink>
+
                     <button class="btn-delete" title="Supprimer" @click="goDelet(record.id)">
                       🗑️
                     </button>
@@ -91,48 +95,39 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { useRouter, RouterLink } from 'vue-router';
 import { useMedicalRecordStore } from '@/stores/medicalrecordStore';
 import { usePatientStore } from '@/stores/patientStore';
-import { useDoctorStore } from '@/stores/doctorStore';
 import { onMounted, computed } from 'vue';
 
 const router = useRouter();
 const medicalRecordStore = useMedicalRecordStore();
 const patientStore = usePatientStore();
-const doctorStore = useDoctorStore();
 
 /**
- * Fusionne les dossiers avec les noms des patients et médecins
+ * Fusionne les dossiers uniquement avec les noms des patients
  */
 const recordsWithNames = computed(() => {
-  if (!medicalRecordStore.records || !patientStore.patients || !doctorStore.doctors) {
+  if (!medicalRecordStore.records || !patientStore.patients) {
     return [];
   }
 
   const patientsData = Array.isArray(patientStore.patients) 
     ? patientStore.patients 
     : (patientStore.patients.data || []);
-    
-  const doctorsData = Array.isArray(doctorStore.doctors) 
-    ? doctorStore.doctors 
-    : (doctorStore.doctors.data || []);
 
   return medicalRecordStore.records.map(record => {
-    const patient = patientsData.find(p => p.id === record.patient_id);
-    const doctor = doctorsData.find(d => d.id === record.doctor_id);
+    const patient = patientsData.find(p => Number(p.id) === Number(record.patient_id));
 
     return {
       ...record,
+      true_patient_id: patient ? patient.id : record.patient_id,
       patient_name: patient 
         ? `${patient.user?.first_name} ${patient.user?.last_name}` 
-        : 'Patient inconnu',
-      doctor_name: doctor 
-        ? `${doctor.user?.first_name} ${doctor.user?.last_name}` 
-        : 'Médecin inconnu'
+        : (record.patient_name || 'Patient inconnu')
     };
   });
 });
 
 const loading = computed(() => {
-  return medicalRecordStore.loading || patientStore.loading || doctorStore.loading;
+  return medicalRecordStore.loading || patientStore.loading;
 });
 
 const formatDate = (dateString) => {
@@ -161,146 +156,34 @@ const goDelet = async (id) => {
 onMounted(async () => {
   await Promise.all([
     medicalRecordStore.fetchAllMedicalRecords(),
-    patientStore.allPatient(),
-    doctorStore.fetchAllDoctors()
+    patientStore.allPatient()
   ]);
 });
 </script>
 
 <style scoped>
-.medical-records-wrapper {
-  padding: 30px;
-  background-color: #f8fafc;
-  min-height: 100vh;
-}
-
-/* Header & Retour */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.btn-back {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-back:hover {
-  background: #f1f5f9;
-  transform: translateX(-3px);
-}
-
-.header-text h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0;
-}
-
-.count-badge {
-  font-size: 11px;
-  background: #e2e8f0;
-  color: #475569;
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-weight: 600;
-}
-
-.btn-add {
-  background: #0040d0;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Table Styling */
-.table-card {
-  background: white;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.records-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.records-table th {
-  background: #f8fafc;
-  padding: 16px 20px;
-  font-size: 12px;
-  text-transform: uppercase;
-  color: #64748b;
-  font-weight: 700;
-  text-align: left;
-}
-
-.records-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 14px;
-}
-
-/* Cells */
+.medical-records-wrapper { padding: 30px; background-color: #f8fafc; min-height: 100vh; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.title-section { display: flex; align-items: center; gap: 15px; }
+.btn-back { width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.btn-back:hover { background: #f1f5f9; transform: translateX(-3px); }
+.header-text h2 { font-size: 24px; font-weight: 800; color: #1e293b; margin: 0; }
+.count-badge { font-size: 11px; background: #e2e8f0; color: #475569; padding: 2px 10px; border-radius: 20px; font-weight: 600; }
+.btn-add { background: #0040d0; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.table-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
+.records-table { width: 100%; border-collapse: collapse; }
+.records-table th { background: #f8fafc; padding: 16px 20px; font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700; text-align: left; }
+.records-table td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
 .patient-cell .name { font-weight: 700; color: #1e293b; display: block; }
 .patient-cell .ref { font-size: 11px; color: #94a3b8; }
-.doctor-tag { color: #3b82f6; font-weight: 800; font-size: 11px; }
-
-/* Status Pills */
-.status-pill {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
+.status-pill { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .status-pill.complet { background: #dcfce7; color: #16a34a; }
 .status-pill.en-cours { background: #fef3c7; color: #d97706; }
-
-/* Actions */
 .text-right { text-align: right; }
 .action-group { display: flex; gap: 8px; justify-content: flex-end; }
-.action-group a, .btn-delete {
-  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; background: #f1f5f9; border: none; cursor: pointer; text-decoration: none;
-}
-
-/* Loading Spinner */
+.action-group a, .btn-delete { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #f1f5f9; border: none; cursor: pointer; text-decoration: none; }
 .state-container { text-align: center; padding: 50px; color: #64748b; }
-.spinner {
-  width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #0040d0;
-  border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;
-}
+.spinner { width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #0040d0; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-@media (max-width: 768px) {
-  .btn-label { display: none; }
-  .records-table thead { display: none; }
-  .records-table tr { display: block; padding: 15px; border-bottom: 5px solid #f1f5f9; }
-  .records-table td { display: flex; justify-content: space-between; padding: 8px 0; border: none; }
-}
+@media (max-width: 768px) { .btn-label { display: none; } .records-table thead { display: none; } .records-table tr { display: block; padding: 15px; border-bottom: 5px solid #f1f5f9; } .records-table td { display: flex; justify-content: space-between; padding: 8px 0; border: none; } }
 </style>

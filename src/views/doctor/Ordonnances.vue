@@ -235,7 +235,7 @@ async function createOrdonnanceAndFinalize() {
     const payload = {
         notes: finalNotes.value,
         prescription_lines: prescriptionLines.value.map(line => ({
-            medicament_name: line.medicationName, // Attention : vérifier si l'API attend medicament_name ou medication_name
+            medication_name: line.medicationName, // Attention : vérifier si l'API attend medicament_name ou medication_name
             dosage: line.dosage,
             frequency: line.frequency,
             duration: line.duration,
