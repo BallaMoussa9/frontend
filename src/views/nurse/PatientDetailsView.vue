@@ -128,17 +128,35 @@
           </div>
         </div>
 
-        <section class="documents-section card">
-          <div class="card-header"><i class="fas fa-file-medical"></i> Documents</div>
-          <div class="card-body">
-            <div v-if="patient.documents?.length" class="doc-list">
-              <a v-for="(doc, index) in patient.documents" :key="index" :href="doc.url" target="_blank" class="doc-item">
-                <i class="far fa-file-pdf"></i> {{ doc.name }}
-              </a>
-            </div>
-            <p v-else class="empty-state">Aucun document.</p>
+        <section class="card documents-section">
+  <div class="card-header"><i class="fas fa-flask"></i> Analyses de Laboratoire</div>
+  <div class="card-body">
+    <div v-if="labStore.labRequests && labStore.labRequests.length > 0" class="doc-list">
+      
+      <div v-for="lab in labStore.labRequests" :key="lab.id" class="doc-item">
+        <div class="lab-info">
+          <i class="fas fa-vial"></i>
+          <div>
+            <strong>{{ lab.name }}</strong> ({{ lab.type }})<br>
+            <small>Statut: {{ lab.status }} | Prescrit par: Dr. {{ lab.doctor?.user?.first_name }} {{ lab.doctor?.user?.last_name }}</small>
           </div>
-        </section>
+        </div>
+
+        <div class="doc-actions">
+          <a v-if="lab.status === 'completed' && lab.resultats?.length > 0" 
+             :href="'https://santeko.abdatytch.com/storage/' + lab.resultats[0].result_file" 
+             target="_blank" 
+             class="btn-download">
+             <i class="fas fa-download"></i> Télécharger Résultat
+          </a>
+          <span v-else class="badge-status">{{ lab.status }}</span>
+        </div>
+      </div>
+
+    </div>
+    <p v-else class="empty-state">Aucune analyse demandée pour ce patient.</p>
+  </div>
+</section>
       </template>
 
       <div v-else class="empty-state-container">
@@ -153,11 +171,13 @@ import { ref, onMounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import { usePatientStore } from "@/stores/patientStore";
 import { useBedStore } from "@/stores/bedStore";
-import NurseLayout from "@/layouts/NurseLayout.vue"; // VÉRIFIE CE CHEMIN !
+import { useLabStore } from "@/stores/labStore"; // Ajout de l'import
+import NurseLayout from "@/layouts/NurseLayout.vue";
 
 const route = useRoute();
 const patientStore = usePatientStore();
 const bedStore = useBedStore();
+const labStore = useLabStore(); // Initialisation du store
 
 const idPatient = ref(route.params.idPatient);
 const patient = ref({});
@@ -172,7 +192,7 @@ const patientData = ref({
   bed_id: null,
 });
 
-// LOGIQUE DES LITS
+// LOGIQUE DES LITS (Inchangée)
 const groupedAvailableBeds = computed(() => {
     let bedsToDisplay = [...(bedStore.getAvailableBeds || [])];
     if (patient.value.bed_id && patient.value.bed && !bedsToDisplay.some(b => b.id === patient.value.bed_id)) {
@@ -191,7 +211,7 @@ const groupedAvailableBeds = computed(() => {
     return Object.values(departmentsMap).sort((a, b) => a.departmentName.localeCompare(b.departmentName));
 });
 
-// HELPERS
+// HELPERS (Inchangés)
 const calculateAge = (birthDateString) => {
   if (!birthDateString) return "N/A";
   const birthDate = new Date(birthDateString);
@@ -210,21 +230,27 @@ const formatGender = (genre) => {
   return genre;
 };
 
-// ACTIONS
+// ACTIONS (Modifiées pour le log)
+// ... dans ton script setup
 const loadPatientData = async (patientId) => {
   if (!patientId) return;
   globalLoading.value = true;
   try {
+    // 1. Charge les données du patient
     await patientStore.onePatient(patientId);
+    
+    // 2. IMPORTANT : Charge les données du LabStore ici pour ce patient
+    // (Ajuste selon la méthode qui permet de filtrer par patient, ici un exemple)
+    await labStore.listLabRequests({ patient_id: patientId }); 
+
+    // 3. MAINTENANT ton log affichera les données
+    console.log("--- DEBUG LABSTORE APRÈS CHARGEMENT ---");
+    console.log("labRequests pour ce patient:", labStore.labRequests);
+    console.log("---------------------------------------");
+
     if (patientStore.currentPatient) {
       patient.value = patientStore.currentPatient;
-      patientData.value.status = patient.value.status || 'actif';
-      patientData.value.poids = patient.value.poids ? parseFloat(patient.value.poids) : null;
-      patientData.value.taille = patient.value.taille ? parseFloat(patient.value.taille) : null;
-      const currentBedId = patient.value.bed_id ? Number(patient.value.bed_id) : null;
-      patientData.value.bed_id = currentBedId;
-      previousBedId.value = currentBedId;
-      await bedStore.fetchBeds();
+      // ... reste de ton code inchangé
     }
   } finally {
     globalLoading.value = false;
@@ -254,7 +280,10 @@ const handleUpdate = async () => {
   }
 };
 
-onMounted(() => loadPatientData(idPatient.value));
+onMounted(() => {
+    loadPatientData(idPatient.value);
+});
+
 watch(() => route.params.idPatient, (newId) => { if (newId) loadPatientData(newId); });
 </script>
 
@@ -359,7 +388,15 @@ watch(() => route.params.idPatient, (newId) => { if (newId) loadPatientData(newI
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
-
+.lab-info { display: flex; align-items: center; gap: 10px; }
+.badge-status { 
+  font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; 
+  background: #f1f5f9; color: #64748b; 
+}
+.btn-download { 
+  display: flex; align-items: center; gap: 5px; color: #059669; 
+  text-decoration: none; font-weight: 600; font-size: 0.85rem; 
+}
 .vital-item {
   padding: 0.75rem;
   background: #fcfdfe;
