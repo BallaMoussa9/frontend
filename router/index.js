@@ -16,6 +16,85 @@ const routes = [
     name: 'Register',
     component: () => import('../src/views/InscriptionView.vue'),
   },
+  // Pages Footer - Produit
+  {
+    path: '/fonctionnalites',
+    name: 'Fonctionnalites',
+    component: () => import('../src/views/pages/FonctionnalitesView.vue'),
+  },
+  {
+    path: '/tarification',
+    name: 'Tarification',
+    component: () => import('../src/views/pages/TarificationView.vue'),
+  },
+  {
+    path: '/demo',
+    name: 'Demo',
+    component: () => import('../src/views/pages/DemoView.vue'),
+  },
+  {
+    path: '/api',
+    name: 'Api',
+    component: () => import('../src/views/pages/ApiView.vue'),
+  },
+  // Pages Footer - Entreprise
+  {
+    path: '/a-propos',
+    name: 'APropos',
+    component: () => import('../src/views/pages/AProposView.vue'),
+  },
+  {
+    path: '/carrieres',
+    name: 'Carrieres',
+    component: () => import('../src/views/pages/CarrieresView.vue'),
+  },
+  {
+    path: '/partenaires',
+    name: 'Partenaires',
+    component: () => import('../src/views/pages/PartenairesView.vue'),
+  },
+  {
+    path: '/blog',
+    name: 'Blog',
+    component: () => import('../src/views/pages/BlogView.vue'),
+  },
+  // Pages Footer - Support
+  {
+    path: '/aide',
+    name: 'Aide',
+    component: () => import('../src/views/pages/AideView.vue'),
+  },
+  {
+    path: '/contact',
+    name: 'Contact',
+    component: () => import('../src/views/pages/ContactView.vue'),
+  },
+  {
+    path: '/formation',
+    name: 'Formation',
+    component: () => import('../src/views/pages/FormationView.vue'),
+  },
+  {
+    path: '/statut',
+    name: 'Statut',
+    component: () => import('../src/views/pages/StatutView.vue'),
+  },
+  // Pages Footer - Légal
+  {
+    path: '/confidentialite',
+    name: 'Confidentialite',
+    component: () => import('../src/views/pages/ConfidentialiteView.vue'),
+  },
+  {
+    path: '/conditions',
+    name: 'Conditions',
+    component: () => import('../src/views/pages/ConditionsView.vue'),
+  },
+  {
+    path: '/cookies',
+    name: 'Cookies',
+    component: () => import('../src/views/pages/CookiesView.vue'),
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'Page404',
