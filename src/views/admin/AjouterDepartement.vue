@@ -1,114 +1,249 @@
 <template>
-  <AdminLayout>
-    <div class="form-container-wrapper">
-      <header class="header-section">
-        <button @click="router.back()" class="btn-back" title="Retour">
-          <span class="arrow">←</span>
-        </button>
-        <div class="header-text">
-          <h2>Ajouter un Nouveau Service</h2>
-          <p class="subtitle">Créez un nouveau département hospitalier et assignez un responsable.</p>
+  <div class="admin-page-container">
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <aside :class="['sidebar', { 'open': isSidebarOpen }]">
+        <div class="sidebar-header">
+          <div class="logo-icon">S</div>
+          <div class="logo-text">SanTeKo <span>Admin</span></div>
         </div>
-      </header>
 
-      <form @submit.prevent="submit" class="add-department-form">
-        <div class="form-card">
-          <div class="form-grid">
-            <div class="field-group">
-              <label>Nom du service</label>
-              <input 
-                v-model="form.name" 
-                type="text" 
-                placeholder="Ex: Cardiologie, Pédiatrie..." 
-                required 
-              />
-            </div>
+        <nav class="menu">
+          <RouterLink :to="{name:'AdminDashboard'}" class="menu-item" @click="closeSidebar">
+            <BarChart3 :size="20" class="menu-icon" /> Dashboard
+          </RouterLink>
+          
+          <div class="menu-divider">Gestion & Outils</div>
+          
+          <RouterLink :to="{name:'Service'}" class="menu-item" @click="closeSidebar">
+            <Activity :size="20" class="menu-icon" /> Gestion Services
+          </RouterLink>
+          <RouterLink :to="{name:'AddRole'}" class="menu-item" @click="closeSidebar">
+            <Users :size="20" class="menu-icon" /> Rôles & Accès
+          </RouterLink>
+          <RouterLink :to="{name:'Statistique'}" class="menu-item" @click="closeSidebar">
+            <TrendingUp :size="20" class="menu-icon" /> Statistiques
+          </RouterLink>
 
-            <div class="field-group">
-              <label>État initial</label>
-              <select v-model="form.status">
-                <option value="active">🟢 Actif (Opérationnel)</option>
-                <option value="inactive">🔴 Inactif (En attente)</option>
-              </select>
-            </div>
+          <div class="menu-divider">Communication</div>
 
-            <div class="field-group full-width">
-              <label>Localisation / Poste associé</label>
-              <input 
-                v-model="form.position" 
-                type="text" 
-                placeholder="Ex: Aile Est, 2ème étage, Bloc B" 
-              />
-            </div>
+          <RouterLink :to="{name:'Dialogue'}" class="menu-item" @click="closeSidebar">
+            <MessageSquare :size="20" class="menu-icon" /> Conversations
+          </RouterLink>
+          <RouterLink :to="{name:'Notification'}" class="menu-item" @click="closeSidebar">
+            <Clock :size="20" class="menu-icon" /> Notifications
+          </RouterLink>
 
-            <div class="field-group full-width">
-              <label>Description du service</label>
-              <textarea 
-                v-model="form.description" 
-                placeholder="Décrivez brièvement les missions de ce service..."
-              ></textarea>
-            </div>
+          <div class="menu-divider">Configuration</div>
 
-            <hr class="separator full-width" />
+          <RouterLink :to="{name:'Settings'}" class="menu-item" @click="closeSidebar">
+            <FileText :size="20" class="menu-icon" /> Paramètres
+          </RouterLink>
+        </nav>
+      </aside>
 
-            <div class="field-group full-width">
-              <label for="user-search">Rechercher un responsable (Médecin/Admin)</label>
-              <div class="search-input-wrapper">
-                <span class="search-icon">🔍</span>
-                <input 
-                  id="user-search" 
-                  v-model="searchQuery" 
-                  type="text"
-                  placeholder="Tapez le nom pour filtrer la liste ci-dessous..." 
-                />
+      <!-- Mobile Toggle -->
+      <button class="mobile-toggle" @click="toggleSidebar">
+        {{ isSidebarOpen ? '✕' : '☰' }}
+      </button>
+
+      <div v-if="isSidebarOpen" class="sidebar-overlay" @click="isSidebarOpen = false"></div>
+
+      <!-- Main Content -->
+      <main class="admin-main">
+        <div class="dashboard-admin">
+          <!-- Header -->
+          <header class="dashboard-header">
+            <div class="header-content">
+              <div class="title-section">
+                <div class="title-content">
+                  <div class="title-with-back">
+                    <button class="back-btn" @click="goBack">
+                      <ArrowLeft :size="20" />
+                    </button>
+                    <h1 class="dashboard-title">
+                      <span class="title-icon">
+                        <Plus :size="24" />
+                      </span>
+                      Ajouter un Nouveau Service
+                    </h1>
+                  </div>
+                  <p class="dashboard-subtitle">
+                    Créez un nouveau département hospitalier et assignez un responsable
+                  </p>
+                </div>
+              </div>
+              <div class="header-actions">
+                <button class="action-btn secondary" @click="goBack">
+                  <ArrowLeft :size="16" />
+                  Annuler
+                </button>
               </div>
             </div>
+          </header>
 
-            <div class="field-group full-width">
-              <label for="user-select">Responsable sélectionné</label>
-              <select 
-                id="user-select" 
-                v-model="form.responsible_user_id"
-                :class="{ 'has-value': form.responsible_user_id }"
-              >
-                <option :value="null">-- Choisir un responsable dans la liste --</option>
-                <option
-                  v-for="user in filteredResponsibleUsers" 
-                  :key="user.id"
-                  :value="user.id"
-                >
-                  Dr. {{ user.first_name }} {{ user.last_name }} ({{ user.role }})
-                </option>
-              </select>
-              <p class="helper-text" v-if="filteredResponsibleUsers.length === 0 && searchQuery">
-                Aucun utilisateur ne correspond à votre recherche.
-              </p>
-            </div>
+          <!-- Form Section -->
+          <div class="form-section">
+            <form @submit.prevent="submit" class="department-form">
+              <!-- Service Information -->
+              <div class="form-group">
+                <h3 class="section-title">
+                  <Activity :size="20" />
+                  Informations Générales
+                </h3>
+                
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Nom du service</label>
+                    <input 
+                      v-model="form.name" 
+                      type="text" 
+                      placeholder="Ex: Cardiologie, Pédiatrie..." 
+                      class="form-input"
+                      required 
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label>État initial</label>
+                    <select v-model="form.status" class="form-select">
+                      <option value="active">Actif (Opérationnel)</option>
+                      <option value="inactive">Inactif (En attente)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Location Details -->
+              <div class="form-group">
+                <h3 class="section-title">
+                  <MapPin :size="20" />
+                  Localisation et Description
+                </h3>
+                
+                <div class="form-field full-width">
+                  <label>Localisation / Poste associé</label>
+                  <input 
+                    v-model="form.position" 
+                    type="text" 
+                    placeholder="Ex: Aile Est, 2ème étage, Bloc B" 
+                    class="form-input"
+                  />
+                </div>
+
+                <div class="form-field full-width margin-top-field">
+                  <label>Description du service</label>
+                  <textarea 
+                    v-model="form.description" 
+                    placeholder="Décrivez brièvement les missions de ce service..."
+                    class="form-textarea"
+                    rows="4"
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Responsible Assignment -->
+              <div class="form-group">
+                <h3 class="section-title">
+                  <User :size="20" />
+                  Assignation du Responsable
+                </h3>
+                
+                <div class="form-field full-width">
+                  <label for="user-search">Rechercher un responsable (Médecin/Admin)</label>
+                  <div class="search-input-wrapper">
+                    <Search :size="18" class="search-icon" />
+                    <input 
+                      id="user-search" 
+                      v-model="searchQuery" 
+                      type="text"
+                      placeholder="Tapez le nom pour filtrer la liste ci-dessous..." 
+                      class="form-input search-input"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-field full-width margin-top-field">
+                  <label for="user-select">Responsable sélectionné</label>
+                  <select 
+                    id="user-select" 
+                    v-model="form.responsible_user_id"
+                    class="form-select large-field"
+                    :class="{ 'has-value': form.responsible_user_id }"
+                  >
+                    <option :value="null">-- Choisir un responsable dans la liste --</option>
+                    <option
+                      v-for="user in filteredResponsibleUsers" 
+                      :key="user.id"
+                      :value="user.id"
+                    >
+                      Dr. {{ user.first_name }} {{ user.last_name }} ({{ user.role }})
+                    </option>
+                  </select>
+                  <p class="helper-text" v-if="filteredResponsibleUsers.length === 0 && searchQuery">
+                    Aucun utilisateur ne correspond à votre recherche.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button type="button" class="action-btn secondary" @click="goBack">
+                  <ArrowLeft :size="16" />
+                  Annuler
+                </button>
+                <button type="submit" class="action-btn primary" :disabled="departmentStore.loading">
+                  <div class="spinner" v-if="departmentStore.loading"></div>
+                  <Plus :size="16" v-else />
+                  {{ departmentStore.loading ? 'Création en cours...' : 'Créer le service' }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-
-        <div class="form-actions">
-          <button type="button" @click="router.back()" class="btn-cancel">Annuler</button>
-          <button type="submit" class="submit" :disabled="departmentStore.loading">
-            <span v-if="departmentStore.loading" class="mini-spinner"></span>
-            {{ departmentStore.loading ? 'Création...' : 'Créer le service' }}
-          </button>
-        </div>
-      </form>
+      </main>
     </div>
-  </AdminLayout>
+  </div>
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
-import { reactive, onMounted, ref, computed } from 'vue' 
+import { ref, reactive, onMounted, computed } from 'vue' 
 import { useRouter } from 'vue-router'
 import { useDepartmentStore } from '@/stores/departmentStore'
 import { useUserStore } from '@/stores/userStore' 
+import { 
+  BarChart3, 
+  Users, 
+  Activity, 
+  MessageSquare, 
+  Clock,
+  TrendingUp,
+  FileText,
+  ArrowLeft,
+  Plus,
+  User,
+  MapPin,
+  Search
+} from 'lucide-vue-next';
 
 const router = useRouter()
 const departmentStore = useDepartmentStore()
 const userStore = useUserStore() 
+const isSidebarOpen = ref(false)
+
+// Fonctions sidebar
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const closeSidebar = () => {
+  if (window.innerWidth <= 1024) {
+    isSidebarOpen.value = false
+  }
+}
+
+const goBack = () => {
+  window.history.back()
+}
 
 const searchQuery = ref('') 
 
@@ -151,83 +286,543 @@ const submit = async () => {
 </script>
 
 <style scoped>
-@import './FormStyle.css';
-
-.form-container-wrapper {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 30px;
+/* Layout Container */
+.admin-page-container {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  overflow: hidden;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
-/* Header & Bouton Retour */
-.header-section {
+.admin-layout {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+/* Animation de fond */
+.admin-page-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-layout > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* === Sidebar === */
+.sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  flex-shrink: 0;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sidebar-header {
+  padding: 2rem 1.5rem;
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 30px;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-.btn-back {
-  width: 42px; height: 42px;
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.logo-text {
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text span {
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  margin-left: 8px;
+}
+
+.menu {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  position: relative;
+  z-index: 2;
+  overflow-y: auto;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 15px 19px;
+  text-decoration: none;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: 0.2s;
-  color: #64748b;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-back:hover {
-  background: #f1f5f9;
-  transform: translateX(-3px);
-  color: #0040d0;
-  border-color: #cbd5e1;
+.menu-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
-.header-text h2 { margin: 0; font-size: 24px; color: #1e293b; font-weight: 800; }
-.subtitle { margin: 0; color: #64748b; font-size: 14px; margin-top: 4px; }
-
-/* Carte de Formulaire */
-.form-card {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
+.menu-item:hover::before {
+  left: 100%;
 }
 
-.form-grid {
+.menu-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.menu-item.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(16, 185, 129, 0.2));
+  color: white;
+  transform: translateX(5px);
+}
+
+.menu-item.active .menu-icon {
+  color: #3b82f6;
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.menu-divider {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 1.2rem 0 0.8rem 0;
+}
+
+/* Mobile Toggle */
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 1100;
+  background: #0f1e46;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-toggle:hover {
+  background: #1e2b5c;
+  transform: translateY(-2px);
+}
+
+/* Main Content */
+.admin-main {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+.dashboard-admin {
+  font-family: 'Inter', sans-serif;
+  padding: 2rem;
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: white;
+  box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+/* === Header === */
+.dashboard-header {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #10b981);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+  z-index: 1;
+}
+
+.dashboard-header:hover::before {
+  transform: scaleX(1);
+}
+
+.dashboard-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.title-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+.title-icon {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  animation: pulse 2s infinite;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* === Back Button === */
+.title-with-back {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+.back-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.back-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* === Form Section === */
+.form-section {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.form-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+  z-index: 1;
+}
+
+.form-section:hover::before {
+  transform: scaleX(1);
+}
+
+.form-section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+/* === Form Groups === */
+.form-group {
+  margin-bottom: 4rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.section-title svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* === Form Layout === */
+.form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 25px;
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
 }
 
-.full-width { grid-column: span 2; }
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 
-.field-group { display: flex; flex-direction: column; gap: 8px; }
-.field-group label { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; }
+.form-field.full-width {
+  grid-column: 1 / -1;
+}
 
-input, select, textarea {
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
+.form-field label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.form-input, .form-select, .form-textarea {
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  background: #f8fafc;
-  font-size: 15px;
-  transition: 0.2s;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  min-height: 48px;
 }
 
-input:focus, select:focus, textarea:focus {
-  border-color: #0040d0;
-  background: white;
+/* Champs agrandis spécifiques */
+.form-select.large-field {
+  padding: 1.25rem 1.5rem;
+  font-size: 1rem;
+  min-height: 56px;
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(0, 64, 208, 0.05);
+  border-color: rgba(37, 99, 235, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-textarea { min-height: 100px; resize: vertical; }
+.form-select option {
+  background: #1e293b;
+  color: white;
+}
 
-.separator { border: 0; border-top: 1px solid #f1f5f9; margin: 10px 0; }
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
 
-/* Zone de recherche */
+/* Margin top pour certains champs */
+.margin-top-field {
+  margin-top: 2rem;
+}
+
+/* === Search Input === */
 .search-input-wrapper {
   position: relative;
   display: flex;
@@ -236,58 +831,168 @@ textarea { min-height: 100px; resize: vertical; }
 
 .search-icon {
   position: absolute;
-  left: 15px;
-  color: #94a3b8;
+  left: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
 }
 
-.search-input-wrapper input {
-  padding-left: 45px;
+.search-input {
+  padding-left: 3rem !important;
 }
 
-.helper-text { font-size: 12px; color: #e11d48; margin-top: 4px; }
+/* === Helper Text === */
+.helper-text {
+  font-size: 0.75rem;
+  color: rgba(239, 68, 68, 0.8);
+  margin-top: 0.5rem;
+}
 
-/* Actions */
+/* === Form Actions === */
 .form-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 15px;
-  margin-top: 30px;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.submit {
-  padding: 12px 30px;
-  background-color: #0040d0;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 700;
+.action-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition: 0.2s;
-}
-
-.submit:hover:not(:disabled) { background-color: #0035b0; transform: translateY(-2px); }
-.submit:disabled { background-color: #94a3b8; cursor: not-allowed; }
-
-.btn-cancel {
-  padding: 12px 30px;
-  background: white;
-  border: 1px solid #e2e8f0;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
   border-radius: 10px;
-  color: #64748b;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 140px;
+  min-height: 44px;
 }
 
-.mini-spinner {
-  width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
+.action-btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.action-btn.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+}
+
+.action-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === Spinner === */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === Responsive Design === */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .mobile-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-admin {
+    padding: 1rem;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .title-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .dashboard-title {
+    font-size: 1.4rem;
+  }
+  
+  .form-section {
+    padding: 1.5rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-field.full-width {
+    grid-column: span 1;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .action-btn {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+/* === Variables === */
+:root {
+  --primary: #2563eb;
+  --secondary: #10b981;
+  --light: #f8fafc;
+  --dark: #0f172a;
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
 </style>

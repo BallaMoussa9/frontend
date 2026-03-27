@@ -1,16 +1,21 @@
 <template>
   <SidebarLayout>
     <section class="sos-section">
-      <div class="header-banner">
-        <h1><i class="fas fa-exclamation-triangle"></i> Alerte d'Urgence SOS</h1>
-        <p>Alertez immédiatement les services d’urgence et vos contacts de confiance.</p>
+      <div class="dashboard-header">
+        <div class="header-content">
+          <h1 class="page-title">
+            <AlertTriangle :size="32" class="title-icon pulse" />
+            Alerte d'Urgence SOS
+          </h1>
+          <p class="page-subtitle">Alertez immédiatement les services d'urgence et vos contacts de confiance.</p>
+        </div>
       </div>
 
       <div class="sos-main-container">
         <div class="sos-card">
           <div class="alert-info">
             <div class="info-icon">
-              <i class="fas fa-info-circle"></i>
+              <Info :size="24" />
             </div>
             <p>
               En cliquant sur le bouton ci-dessous, votre <strong>position GPS exacte</strong> sera transmise aux secours les plus proches ainsi qu'à l'administration de la plateforme.
@@ -24,8 +29,8 @@
               :class="['sos-button', { 'pulsing': !isSending }]"
             >
               <div class="btn-content">
-                <i v-if="!isSending" class="fas fa-hand-pointer"></i>
-                <span v-if="isSending" class="loader-mini"></span>
+                <Pointer :size="24" v-if="!isSending" />
+                <Loader2 :size="24" v-else class="animate-spin" />
                 <span>{{ isSending ? 'Signal en cours...' : 'DÉCLENCHER L’ALERTE' }}</span>
               </div>
             </button>
@@ -34,21 +39,26 @@
 
         <transition name="fade">
           <div v-if="error || sosAlertsStore.error" class="custom-alert error">
-            <i class="fas fa-times-circle"></i>
+            <XCircle :size="20" />
             <span>{{ error || sosAlertsStore.error }}</span>
           </div>
         </transition>
 
         <transition name="fade">
           <div v-if="success || sosAlertsStore.success" class="custom-alert success">
-            <i class="fas fa-check-circle"></i>
+            <CheckCircle :size="20" />
             <span>{{ success || sosAlertsStore.success }}</span>
           </div>
         </transition>
 
         <div class="location-box" v-if="coords">
           <div class="location-header">
-            <h3><i class="fas fa-map-marker-alt"></i> Votre position actuelle</h3>
+            <div class="location-title">
+              <div class="card-icon">
+                <MapPin :size="20" />
+              </div>
+              <h3>Votre position actuelle</h3>
+            </div>
             <span class="gps-status">GPS Actif</span>
           </div>
           <div class="coords-grid">
@@ -74,7 +84,12 @@
 <script setup>
 import SidebarLayout from '@/layouts/SidebarLayout.vue'
 import { ref } from 'vue'
-import { useSosAlertsStore } from '@/stores/SosAlertsStore' 
+import { useSosAlertsStore } from '@/stores/SosAlertsStore'
+import {
+  AlertTriangle, Info, MapPin, Pointer, Loader2, XCircle,
+  CheckCircle, Activity, Shield, Phone, Clock, Users,
+  Zap, Heart, AlertCircle, Navigation, Satellite
+} from 'lucide-vue-next' 
 
 const sosAlertsStore = useSosAlertsStore()
 const coords = ref(null)
@@ -147,102 +162,492 @@ async function sendAlert() {
 </script>
 
 <style scoped>
-.sos-section { padding: 30px; max-width: 800px; margin: 0 auto; }
+.sos-section {
+  --primary: #2563eb;
+  --primary-dark: #1e40af;
+  --primary-light: #3b82f6;
+  --secondary: #10b981;
+  --secondary-dark: #059669;
+  --accent: #8b5cf6;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #22c55e;
+  --dark: #0f172a;
+  --light: #ffffff;
+  --gray: #94a3b8;
+  --gray-light: #cbd5e1;
+  --gray-dark: #64748b;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
+  --radius: 16px;
+  
+  padding: 2rem;
+  height: 100%;
+  background: transparent;
+  position: relative;
+}
 
-.header-banner { margin-bottom: 30px; }
-.header-banner h1 { color: #c20000; font-size: 1.8rem; display: flex; align-items: center; gap: 12px; margin-bottom: 5px; }
-.header-banner p { color: #64748b; }
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  gap: 1.5rem;
+  animation: slideDown 0.6s ease-out;
+}
 
-.sos-main-container { display: flex; flex-direction: column; gap: 20px; }
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: white;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.title-icon {
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+}
+
+.title-icon.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.5);
+  }
+}
+
+.page-subtitle {
+  color: var(--gray);
+  font-size: 1.1rem;
+  margin-top: 8px;
+  opacity: 0.9;
+}
+
+.sos-main-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: fadeInUp 0.8s ease-out 0.3s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .sos-card {
-  background: white;
-  border-radius: 15px;
-  padding: 30px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem;
   text-align: center;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sos-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+
+.sos-card:hover::before {
+  transform: scaleX(1);
+}
+
+.sos-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+  border-color: #dc2626;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
 }
 
 .alert-info {
   display: flex;
-  background: #fef2f2;
-  padding: 15px;
-  border-radius: 10px;
-  gap: 15px;
-  text-align: left;
-  margin-bottom: 30px;
-  border-left: 4px solid #c20000;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(239, 68, 68, 0.1));
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #dc2626;
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.6s ease-out 0.6s both;
 }
-.info-icon { color: #c20000; font-size: 1.2rem; }
-.alert-info p { margin: 0; font-size: 0.95rem; color: #7f1d1d; line-height: 1.5; }
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.info-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+  flex-shrink: 0;
+}
+
+.alert-info p {
+  margin: 0;
+  font-size: 1rem;
+  color: white;
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.alert-info strong {
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.action-area {
+  margin-top: 2rem;
+}
 
 .sos-button {
-  background: #c20000;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   color: white;
   border: none;
   width: 100%;
-  max-width: 400px;
-  padding: 20px;
-  font-size: 1.2rem;
-  font-weight: 800;
+  max-width: 450px;
+  padding: 1.5rem;
+  font-size: 1.3rem;
+  font-weight: 900;
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 0 #8a0000;
-  margin-bottom: 8px;
+  box-shadow: 0 10px 0 #991b1b;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
 }
 
-.sos-button:hover:not(:disabled) { background: #d90000; transform: translateY(-2px); }
-.sos-button:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #8a0000; }
-.sos-button:disabled { background: #cbd5e1; box-shadow: 0 4px 0 #94a3b8; cursor: not-allowed; }
+.sos-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
 
-.btn-content { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.sos-button:hover::before {
+  left: 100%;
+}
 
-/* Animation de pulsation */
-.pulsing { animation: pulse-red 2s infinite; }
+.sos-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  transform: translateY(-4px);
+  box-shadow: 0 15px 0 #991b1b;
+}
+
+.sos-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #991b1b;
+}
+
+.sos-button:disabled {
+  background: linear-gradient(135deg, var(--gray), var(--gray-light));
+  box-shadow: 0 4px 0 var(--gray-dark);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sos-button.pulsing {
+  animation: pulse-red 2s infinite;
+}
+
 @keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(194, 0, 0, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(194, 0, 0, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(194, 0, 0, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4), 0 10px 0 #991b1b;
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(220, 38, 38, 0), 0 10px 0 #991b1b;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0), 0 10px 0 #991b1b;
+  }
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 /* Alerts */
 .custom-alert {
-  padding: 15px 20px;
-  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 600;
+  gap: 1rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.4s ease-out;
 }
-.custom-alert.error { background: #fef2f2; color: #c20000; border: 1px solid #fecaca; }
-.custom-alert.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+.custom-alert.error {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(239, 68, 68, 0.1));
+  color: #ef4444;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.custom-alert.success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
 
 /* Location Box */
 .location-box {
-  background: #ffffff;
-  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(20px);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.6s ease-out 0.9s both;
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.location-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.location-title .card-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s ease;
 }
-.location-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.location-header h3 { font-size: 1rem; color: #002580; margin: 0; }
-.gps-status { font-size: 0.75rem; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
 
-.coords-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.coord-item { background: #f8fafc; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; }
-.coord-item label { font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 4px; }
-.coord-item span { font-family: monospace; font-size: 1rem; color: #1e293b; }
-.coord-item.full { grid-column: span 2; }
-
-/* Loader */
-.loader-mini {
-  width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%;
-  border-top-color: #fff; animation: spin 0.8s linear infinite;
+.location-box:hover .location-title .card-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.5);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.location-title h3 {
+  font-size: 1.2rem;
+  color: white;
+  margin: 0;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.gps-status {
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+  color: #22c55e;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.gps-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.coords-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.coord-item {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.coord-item:hover {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.coord-item label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--gray);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.coord-item span {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.coord-item.full {
+  grid-column: span 2;
+}
+
+/* Animations */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* Variables CSS */
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1e40af;
+  --primary-light: #3b82f6;
+  --secondary: #10b981;
+  --secondary-dark: #059669;
+  --gray: #94a3b8;
+  --gray-light: #cbd5e1;
+  --gray-dark: #64748b;
+  --danger: #dc2626;
+  --danger-dark: #991b1b;
+  --danger-light: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .sos-section {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .sos-card {
+    padding: 1.5rem;
+  }
+
+  .sos-button {
+    font-size: 1.1rem;
+    padding: 1.2rem;
+  }
+
+  .alert-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .info-icon {
+    align-self: center;
+  }
+
+  .coords-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .coord-item.full {
+    grid-column: span 1;
+  }
+
+  .location-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+}
 </style>

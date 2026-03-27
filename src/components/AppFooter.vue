@@ -61,7 +61,7 @@
     </div>
 
     <div class="footer-bottom">
-      <p>© 2026 SanTeKo - Abdaty Technologie. Tous droits réservés.</p>
+      <p>© 2026 SanTeKo. Tous droits réservés.</p>
       <div class="footer-links">
         <router-link to="/confidentialite">Confidentialité</router-link>
         <router-link to="/conditions">Conditions</router-link>

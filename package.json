@@ -13,9 +13,13 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
     "axios": "^1.10.0",
     "chart.js": "^4.5.0",
     "dayjs": "^1.11.19",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lodash": "^4.17.21",
     "lucide-vue-next": "^0.564.0",
     "pinia": "^3.0.1",

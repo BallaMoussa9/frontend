@@ -1,96 +1,176 @@
 <template>
   <AppLayout>
-    <div class="profile-wrapper">
-      <div class="header-banner">
-        <h2>Mon Profil Personnel</h2>
-      </div>
-
-      <div class="profile-grid">
-        <aside class="profile-sidebar">
-          <div class="photo-card">
-            <div class="image-container">
-              <img 
-                :src="auth.user?.profile_photo ? `http://localhost/storage/${auth.user.profile_photo}` : '/default-avatar.png'" 
-                class="main-avatar"
-              />
-              <label for="upload-photo" class="upload-overlay">
-                <i class="fas fa-camera"></i>
-                <input type="file" id="upload-photo" @change="updatePhoto" hidden />
-              </label>
-            </div>
-            <h3 class="user-full-name">{{ fullName }}</h3>
-            <span class="role-badge">Utilisateur SanTeKo</span>
-          </div>
-
-          <div class="contact-info-list">
-            <div class="info-item">
-              <span class="icon">📧</span>
-              <div class="text">
-                <label>Email</label>
-                <p>{{ auth.user?.email }}</p>
+    <div class="profile-page">
+      <div class="profile-container">
+        <!-- Header -->
+        <header class="profile-header">
+          <div class="header-content">
+            <div class="header-left">
+              <button @click="$router.back()" class="back-btn" title="Retour">
+                <ArrowLeft :size="20" />
+              </button>
+              <div class="header-icon">
+                <User :size="28" />
+              </div>
+              <div class="header-text">
+                <h1>Mon Profil</h1>
+                <p>Gérez vos informations personnelles et accédez à votre espace</p>
               </div>
             </div>
-            <div class="info-item">
-              <span class="icon">📱</span>
-              <div class="text">
-                <label>Téléphone</label>
-                <p>{{ auth.user?.phone || 'Non renseigné' }}</p>
-              </div>
-            </div>
-            <div class="info-item">
-              <span class="icon">📍</span>
-              <div class="text">
-                <label>Localisation</label>
-                <p>{{ auth.user?.city }}, {{ auth.user?.country }}</p>
-              </div>
+            <div class="header-actions">
+              <button class="space-access-btn" @click="goToPersonalSpace">
+                <LayoutDashboard :size="20" />
+                Mon Espace Personnel
+              </button>
             </div>
           </div>
-        </aside>
+        </header>
 
-        <main class="profile-main-content">
-          <section class="details-card">
-            <div class="card-header">
-              <h3><i class="fas fa-info-circle"></i> Informations personnelles</h3>
-              <button class="edit-btn">Modifier</button>
-            </div>
-            <div class="details-grid">
-              <div class="detail-box">
-                <label>Prénom</label>
-                <p>{{ auth.user?.first_name }}</p>
-              </div>
-              <div class="detail-box">
-                <label>Nom</label>
-                <p>{{ auth.user?.last_name }}</p>
-              </div>
-              <div class="detail-box">
-                <label>Date de naissance</label>
-                <p>{{ auth.user?.birth_date || 'N/A' }}</p>
-              </div>
-              <div class="detail-box">
-                <label>Adresse complète</label>
-                <p>{{ auth.user?.address || 'Non renseignée' }}</p>
-              </div>
-            </div>
-          </section>
+        <!-- Main Content -->
+        <main class="profile-main">
+          <div class="profile-grid">
+            <!-- Profile Sidebar -->
+            <aside class="profile-sidebar">
+              <div class="profile-card">
+                <div class="avatar-section">
+                  <div class="avatar-container">
+                    <img 
+                      :src="auth.user?.profile_photo ? `http://localhost/storage/${auth.user.profile_photo}` : '/default-avatar.png'" 
+                      class="profile-avatar"
+                      :alt="fullName"
+                    />
+                    <label for="upload-photo" class="upload-btn">
+                      <Camera :size="16" />
+                      <input type="file" id="upload-photo" @change="updatePhoto" hidden />
+                    </label>
+                  </div>
+                  <div class="profile-info">
+                    <h2 class="profile-name">{{ fullName }}</h2>
+                    <div class="role-badge">
+                      <Shield :size="14" />
+                      <span>{{ getRoleDisplay(auth.user?.role_name) }}</span>
+                    </div>
+                  </div>
+                </div>
 
-          <section class="stats-card">
-            <div class="progress-info">
-              <h3>Niveau de complétion</h3>
-              <p>Un profil complet permet un meilleur suivi médical.</p>
-            </div>
-            <div class="progress-container">
-              <div class="progress-circle">
-                <svg viewBox="0 0 36 36" class="circular-chart">
-                  <path class="circle-bg"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path class="circle"
-                    :stroke-dasharray="`${completion}, 100`"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                </svg>
-                <div class="percentage">{{ completion }}%</div>
+                <div class="contact-section">
+                  <h3 class="section-title">Coordonnées</h3>
+                  <div class="contact-list">
+                    <div class="contact-item">
+                      <div class="contact-icon">
+                        <Mail :size="16" />
+                      </div>
+                      <div class="contact-content">
+                        <label>Email</label>
+                        <p>{{ auth.user?.email }}</p>
+                      </div>
+                    </div>
+                    <div class="contact-item">
+                      <div class="contact-icon">
+                        <Phone :size="16" />
+                      </div>
+                      <div class="contact-content">
+                        <label>Téléphone</label>
+                        <p>{{ auth.user?.phone || 'Non renseigné' }}</p>
+                      </div>
+                    </div>
+                    <div class="contact-item">
+                      <div class="contact-icon">
+                        <MapPin :size="16" />
+                      </div>
+                      <div class="contact-content">
+                        <label>Localisation</label>
+                        <p>{{ auth.user?.city }}, {{ auth.user?.country }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="profile-content">
+              <!-- Personal Information -->
+              <section class="info-card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <div class="title-icon">
+                      <User :size="20" />
+                    </div>
+                    <div>
+                      <h3>Informations Personnelles</h3>
+                      <p>Détails de votre profil</p>
+                    </div>
+                  </div>
+                  <button class="edit-profile-btn" @click="editProfile">
+                    <Edit :size="16" />
+                    Modifier
+                  </button>
+                </div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <label>Prénom</label>
+                    <p>{{ auth.user?.first_name || 'Non renseigné' }}</p>
+                  </div>
+                  <div class="info-item">
+                    <label>Nom</label>
+                    <p>{{ auth.user?.last_name || 'Non renseigné' }}</p>
+                  </div>
+                  <div class="info-item">
+                    <label>Date de naissance</label>
+                    <p>{{ formatDate(auth.user?.birth_date) }}</p>
+                  </div>
+                  <div class="info-item">
+                    <label>Adresse</label>
+                    <p>{{ auth.user?.address || 'Non renseignée' }}</p>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Profile Completion -->
+              <section class="completion-card">
+                <div class="completion-header">
+                  <div class="completion-title">
+                    <div class="title-icon">
+                      <Target :size="20" />
+                    </div>
+                    <div style="margin-top: 1rem;">
+                      <h3>Complétion du Profil</h3>
+                      <p class="completion-description">Un profil complet permet une meilleure expérience</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="completion-content">
+                  <div class="progress-circle">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <path class="circle-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path class="circle"
+                        :stroke-dasharray="`${completion}, 100`"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div class="percentage">{{ completion }}%</div>
+                  </div>
+                  <div class="completion-details">
+                    <div class="completion-status">
+                      <span :class="['status-badge', getStatusClass(completion)]">
+                        {{ getStatusText(completion) }}
+                      </span>
+                    </div>
+                    <p class="completion-message">
+                      {{ getCompletionMessage(completion) }}
+                    </p>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
         </main>
       </div>
     </div>
@@ -101,9 +181,25 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/authStores'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+import {
+  User,
+  LayoutDashboard,
+  Camera,
+  Shield,
+  Mail,
+  Phone,
+  MapPin,
+  Edit,
+  Target,
+  Zap,
+  Settings,
+  ArrowLeft
+} from 'lucide-vue-next'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const fullName = computed(() => auth.fullName)
 
@@ -115,6 +211,81 @@ const completion = computed(() => {
   })
   return Math.round(total)
 })
+
+// Fonctions utilitaires
+const formatDate = (dateString) => {
+  if (!dateString) return 'Non renseigné'
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+const getRoleDisplay = (role) => {
+  const roleMap = {
+    'admin': 'Administrateur',
+    'doctor': 'Médecin',
+    'nurse': 'Infirmier',
+    'patient': 'Patient',
+    'urgentist': 'Urgentiste',
+    'lab_technician': 'Technicien Labo'
+  }
+  return roleMap[role] || 'Utilisateur SanTeKo'
+}
+
+const getStatusClass = (completion) => {
+  if (completion >= 80) return 'excellent'
+  if (completion >= 60) return 'good'
+  if (completion >= 40) return 'fair'
+  return 'poor'
+}
+
+const getStatusText = (completion) => {
+  if (completion >= 80) return 'Excellent'
+  if (completion >= 60) return 'Bon'
+  if (completion >= 40) return 'Moyen'
+  return 'À compléter'
+}
+
+const getCompletionMessage = (completion) => {
+  if (completion >= 80) return 'Votre profil est très bien rempli !'
+  if (completion >= 60) return 'Votre profil est bien rempli.'
+  if (completion >= 40) return 'Votre profil nécessite quelques informations.'
+  return 'Veuillez compléter votre profil pour une meilleure expérience.'
+}
+
+// Fonctions d'action
+const goToPersonalSpace = () => {
+  // Redirection vers le dashboard principal selon le rôle de l'utilisateur
+  const role = auth.user?.role_name
+  switch (role) {
+    case 'admin':
+      router.push({ name: 'AdminDashboard' })
+      break
+    case 'doctor':
+      router.push({ name: 'DoctorDashboard' })
+      break
+    case 'patient':
+      router.push({ name: 'PatientDashboardView' })
+      break
+    case 'nurse':
+      router.push({ name: 'NurseDashboardView' })
+      break
+    case 'urgentist':
+      router.push({ name: 'UrgentistDashboardView' })
+      break
+    case 'lab_technician':
+      router.push({ name: 'LabDashboard' })
+      break
+    default:
+      router.push({ name: 'AcceuilView' })
+  }
+}
+
+const editProfile = () => {
+  alert('La fonction d\'édition du profil sera bientôt disponible.')
+}
 
 const updatePhoto = async (e) => {
   const file = e.target.files[0]
@@ -140,221 +311,413 @@ const updatePhoto = async (e) => {
 </script>
 
 <style scoped>
-.profile-wrapper {
-  max-width: 1200px;
+/* === Profile Page === */
+.profile-page {
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  color: white;
+}
+
+.profile-container {
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
-  background-color: #f8fafc;
+  padding: 2rem;
 }
 
-.header-banner {
-  margin-bottom: 30px;
-}
-
-.header-banner h2 {
-  color: #1e293b;
-  font-size: 24px;
-  font-weight: 800;
+/* === Header === */
+.profile-header {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
   position: relative;
-  padding-left: 15px;
+  overflow: hidden;
 }
 
-.header-banner h2::before {
+.profile-header::before {
   content: '';
   position: absolute;
+  top: 0;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 24px;
-  background: #3b82f6;
-  border-radius: 4px;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #10b981);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
 }
 
-/* Grille principale */
+.profile-header:hover::before {
+  transform: scaleX(1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 0.75rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 0.5rem;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+.back-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.back-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+.header-icon {
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.3);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.header-text h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-text p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 1rem;
+}
+
+.space-access-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.space-access-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+}
+
+/* === Main Grid === */
+.profile-main {
+  margin-top: 2rem;
+}
+
 .profile-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 30px;
+  grid-template-columns: 380px 1fr;
+  gap: 2rem;
 }
 
-/* Sidebar Gauche */
+/* === Sidebar === */
 .profile-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
 }
 
-.photo-card {
-  background: white;
-  padding: 30px;
-  border-radius: 20px;
+.profile-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
+}
+
+.avatar-section {
   text-align: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
 }
 
-.image-container {
+.avatar-container {
   position: relative;
-  width: 150px;
-  height: 150px;
-  margin: 0 auto 20px;
+  display: inline-block;
+  margin-bottom: 1.5rem;
 }
 
-.main-avatar {
-  width: 100%;
-  height: 100%;
+.profile-avatar {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #f1f5f9;
+  border: 4px solid rgba(37, 99, 235, 0.3);
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.2);
 }
 
-.upload-overlay {
+.upload-btn {
   position: absolute;
   bottom: 5px;
   right: 5px;
-  background: #3b82f6;
+  background: linear-gradient(135deg, #2563eb, #10b981);
   color: white;
+  border: 2px solid white;
+  border-radius: 50%;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 3px solid white;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
-.upload-overlay:hover {
-  background: #2563eb;
+.upload-btn:hover {
   transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
-.user-full-name {
-  font-size: 20px;
+.profile-name {
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 5px;
+  margin: 0 0 0.5rem 0;
+  color: white;
 }
 
 .role-badge {
-  font-size: 12px;
-  background: #eff6ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(37, 99, 235, 0.2);
   color: #3b82f6;
-  padding: 4px 12px;
+  padding: 0.5rem 1rem;
   border-radius: 20px;
+  font-size: 0.875rem;
   font-weight: 600;
+  border: 1px solid rgba(37, 99, 235, 0.3);
 }
 
-.contact-info-list {
-  background: white;
-  padding: 25px;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+.contact-section {
+  margin-top: 2rem;
 }
 
-.info-item {
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.contact-list {
   display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.info-item:last-child { margin-bottom: 0; }
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
 
-.info-item .icon {
-  width: 40px;
-  height: 40px;
-  background: #f8fafc;
+.contact-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(5px);
+}
+
+.contact-icon {
+  background: rgba(37, 99, 235, 0.2);
+  color: #3b82f6;
+  padding: 0.75rem;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  font-size: 18px;
 }
 
-.info-item label {
+.contact-content label {
   display: block;
-  font-size: 11px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.25rem;
   text-transform: uppercase;
-  color: #94a3b8;
-  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.info-item p {
-  color: #334155;
-  font-weight: 600;
-  font-size: 14px;
+.contact-content p {
+  margin: 0;
+  color: white;
+  font-weight: 500;
 }
 
-/* Colonne droite */
-.profile-main-content {
+/* === Content Area === */
+.profile-content {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 2rem;
 }
 
-.details-card, .stats-card {
-  background: white;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+.info-card,
+.completion-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.info-card:hover,
+.completion-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
 }
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f1f5f9;
+  justify-content: space-between;
+  margin-bottom: 2rem;
 }
 
-.card-header h3 {
-  font-size: 18px;
-  color: #1e293b;
-}
-
-.edit-btn {
-  background: #f1f5f9;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.edit-btn:hover { background: #e2e8f0; }
-
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 25px;
-}
-
-.detail-box label {
-  display: block;
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 6px;
-}
-
-.detail-box p {
-  font-size: 16px;
-  color: #1e293b;
-  font-weight: 600;
-}
-
-/* Progression circulaire */
-.stats-card {
+.card-title {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
-.progress-info h3 { margin-bottom: 10px; }
-.progress-info p { color: #64748b; font-size: 14px; }
+.title-icon {
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  padding: 0.75rem;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.card-title h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.25rem 0;
+  color: white;
+}
+
+.card-title p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.completion-description{
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.edit-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item p {
+  margin: 0;
+  color: white;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* === Completion Card === */
+.completion-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+}
 
 .progress-circle {
   position: relative;
@@ -363,25 +726,23 @@ const updatePhoto = async (e) => {
 }
 
 .circular-chart {
-  display: block;
-  margin: 10px auto;
-  max-width: 100%;
-  max-height: 250px;
+  width: 120px;
+  height: 120px;
   transform: rotate(-90deg);
 }
 
 .circle-bg {
   fill: none;
-  stroke: #f1f5f9;
+  stroke: rgba(255, 255, 255, 0.1);
   stroke-width: 3;
 }
 
 .circle {
   fill: none;
-  stroke: #3b82f6;
+  stroke: url(#gradient);
   stroke-width: 3;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.6s ease;
+  transition: stroke-dasharray 0.5s ease;
 }
 
 .percentage {
@@ -389,16 +750,114 @@ const updatePhoto = async (e) => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 22px;
-  font-weight: 800;
-  color: #1e293b;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
 }
 
-/* Mobile Responsive */
-@media (max-width: 900px) {
-  .profile-grid { grid-template-columns: 1fr; }
-  .profile-sidebar { max-width: 100%; }
-  .details-grid { grid-template-columns: 1fr; }
-  .stats-card { flex-direction: column; text-align: center; gap: 20px; }
+.completion-details {
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.status-badge.excellent {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.good {
+  background: rgba(37, 99, 235, 0.2);
+  color: #3b82f6;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.status-badge.fair {
+  background: rgba(251, 191, 36, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.status-badge.poor {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.completion-message {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+}
+
+
+/* === Responsive Design === */
+@media (max-width: 1024px) {
+  .profile-container {
+    padding: 1rem;
+  }
+  
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .profile-sidebar {
+    position: static;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .space-access-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 0.5rem;
+  }
+  
+  .profile-header {
+    padding: 1.5rem;
+  }
+  
+  .header-text h1 {
+    font-size: 1.5rem;
+  }
+  
+  .profile-card,
+  .info-card,
+  .completion-card {
+    padding: 1.5rem;
+  }
+  
+  .completion-content {
+    flex-direction: column;
+    gap: 2rem;
+    text-align: center;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === SVG Gradient === */
+.circular-chart {
+  filter: drop-shadow(0 4px 15px rgba(37, 99, 235, 0.3));
 }
 </style>

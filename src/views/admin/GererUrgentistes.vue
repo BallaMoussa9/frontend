@@ -1,107 +1,244 @@
 <template>
-  <AdminLayout>
-    <div class="urgentistes-page">
-      <header class="header">
-        <div class="header-left">
-          <button @click="router.back()" class="btn-back" title="Retour">
-            <span class="arrow">←</span>
-          </button>
-          <div class="title-group">
-            <h2>Médecins urgentistes</h2>
-            <span class="count-badge" v-if="urgentistStore.allUrgentists?.length > 0">
-              {{ urgentistStore.allUrgentists.length }} praticiens
-            </span>
+  <div class="admin-page-container">
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <aside :class="['sidebar', { 'open': isSidebarOpen }]">
+        <div class="sidebar-header">
+          <div class="logo-icon">S</div>
+          <div class="logo-text">SanTeKo <span>Admin</span></div>
+        </div>
+
+        <nav class="menu">
+          <RouterLink :to="{name:'AdminDashboard'}" class="menu-item" @click="closeSidebar">
+            <BarChart3 :size="20" class="menu-icon" /> Dashboard
+          </RouterLink>
+          
+          <div class="menu-divider">Gestion & Outils</div>
+          
+          <RouterLink :to="{name:'Service'}" class="menu-item" @click="closeSidebar">
+            <Activity :size="20" class="menu-icon" /> Gestion Services
+          </RouterLink>
+          <RouterLink :to="{name:'AddRole'}" class="menu-item" @click="closeSidebar">
+            <Users :size="20" class="menu-icon" /> Rôles & Accès
+          </RouterLink>
+          <RouterLink :to="{name:'Statistique'}" class="menu-item" @click="closeSidebar">
+            <TrendingUp :size="20" class="menu-icon" /> Statistiques
+          </RouterLink>
+
+          <div class="menu-divider">Communication</div>
+
+          <RouterLink :to="{name:'Dialogue'}" class="menu-item" @click="closeSidebar">
+            <MessageSquare :size="20" class="menu-icon" /> Conversations
+          </RouterLink>
+          <RouterLink :to="{name:'Notification'}" class="menu-item" @click="closeSidebar">
+            <Clock :size="20" class="menu-icon" /> Notifications
+          </RouterLink>
+
+          <div class="menu-divider">Configuration</div>
+
+          <RouterLink :to="{name:'Settings'}" class="menu-item" @click="closeSidebar">
+            <FileText :size="20" class="menu-icon" /> Paramètres
+          </RouterLink>
+        </nav>
+      </aside>
+
+      <!-- Mobile Toggle -->
+      <button class="mobile-toggle" @click="toggleSidebar">
+        {{ isSidebarOpen ? '✕' : '☰' }}
+      </button>
+
+      <div v-if="isSidebarOpen" class="sidebar-overlay" @click="isSidebarOpen = false"></div>
+
+      <!-- Main Content -->
+      <main class="admin-main">
+        <div class="dashboard-admin">
+          <!-- Header -->
+          <header class="dashboard-header">
+            <div class="header-content">
+              <div class="title-section">
+                <div class="title-content">
+                  <div class="title-with-back">
+                    <button class="back-btn" @click="goBack">
+                      <ArrowLeft :size="20" />
+                    </button>
+                    <h1 class="dashboard-title">
+                      <span class="title-icon">
+                        <Activity :size="24" />
+                      </span>
+                      Médecins Urgentistes
+                    </h1>
+                  </div>
+                  <p class="dashboard-subtitle">
+                    <span v-if="urgentistStore.allUrgentists?.length > 0">
+                      {{ urgentistStore.allUrgentists.length }} praticiens
+                    </span>
+                    <span v-else>
+                      Gérez tous les médecins urgentistes
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div class="header-actions">
+                <button class="action-btn primary" @click="ajouterUrgentiste">
+                  <Plus :size="16" />
+                  Ajouter un urgentiste
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <!-- Feedback Messages -->
+          <div class="feedback-area">
+            <div v-if="urgentistStore.loading" class="state-message loading">
+              <div class="spinner"></div>
+              <span>Chargement des données...</span>
+            </div>
+            <div v-if="urgentistStore.error" class="state-message error">
+              <AlertTriangle :size="16" />
+              <span>{{ urgentistStore.error }}</span>
+            </div>
+            <div v-if="urgentistStore.success" class="state-message success">
+              <CheckCircle :size="16" />
+              <span>{{ urgentistStore.success }}</span>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="urgentistStore.allUrgentists?.length === 0 && !urgentistStore.loading" class="empty-state">
+            <div class="empty-icon">
+              <Activity :size="48" />
+            </div>
+            <p>Aucun urgentiste n'est répertorié pour le moment.</p>
+            <button @click="ajouterUrgentiste" class="action-btn primary">
+              <Plus :size="16" />
+              Enregistrer un premier médecin
+            </button>
+          </div>
+
+          <!-- Table Section -->
+          <div class="table-section" v-else-if="urgentistStore.allUrgentists?.length > 0">
+            <div class="table-container">
+              <table class="urgentistes-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Praticien</th>
+                    <th>Coordonnées</th>
+                    <th>Ville</th>
+                    <th>Spécialité</th>
+                    <th>Statut</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(doc, index) in urgentistStore.allUrgentists" :key="doc.id" class="table-row">
+                    <td class="col-id">{{ index + 1 }}</td>
+                    <td>
+                      <div class="practitioner-cell">
+                        <div class="practitioner-avatar">
+                          {{ getInitials(doc.user) }}
+                        </div>
+                        <div class="practitioner-info">
+                          <div class="practitioner-name">Dr. {{ doc.user?.first_name }} {{ doc.user?.last_name }}</div>
+                          <div class="practitioner-role">Urgentiste</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="contact-cell">
+                        <div class="contact-item">
+                          <Mail :size="14" class="contact-icon" />
+                          <span>{{ doc.user?.email }}</span>
+                        </div>
+                        <div class="contact-item">
+                          <Phone :size="14" class="contact-icon" />
+                          <span>{{ doc.user?.phone }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="city-tag">{{ doc.user?.city }}</span>
+                    </td>
+                    <td>
+                      <span class="speciality-text">{{ doc.speciality }}</span>
+                    </td>
+                    <td>
+                      <span :class="doc.status === 'available' ? 'status-badge available' : 'status-badge unavailable'">
+                        <div class="status-dot" :class="doc.status"></div>
+                        {{ doc.status === 'available' ? 'Disponible' : 'Indisponible' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="action-buttons">
+                        <RouterLink :to="{ name: 'EditUrgentist', params: { id: doc.id } }" 
+                                     class="action-btn-icon edit" 
+                                     title="Modifier">
+                          <Edit :size="16" />
+                        </RouterLink>
+                        <button @click="supprimer(doc.id)" 
+                                class="action-btn-icon delete" 
+                                title="Supprimer">
+                          <Trash2 :size="16" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <button class="btn-add" @click="ajouterUrgentiste">
-          <span>➕</span> Ajouter un urgentiste
-        </button>
-      </header>
-
-      <div class="feedback-area">
-        <div v-if="urgentistStore.loading" class="state-msg loading">
-          <div class="mini-spinner"></div> Chargement des données...
-        </div>
-        <div v-if="urgentistStore.error" class="state-msg error">
-          ⚠️ {{ urgentistStore.error }}
-        </div>
-        <div v-if="urgentistStore.success" class="state-msg success">
-          ✅ {{ urgentistStore.success }}
-        </div>
-      </div>
-
-      <div v-if="urgentistStore.allUrgentists?.length === 0 && !urgentistStore.loading" class="empty-state">
-        <div class="icon">🚑</div>
-        <p>Aucun urgentiste n'est répertorié pour le moment.</p>
-        <button @click="ajouterUrgentiste" class="btn-link">Enregistrer un premier médecin</button>
-      </div>
-
-      <div class="table-card" v-else-if="urgentistStore.allUrgentists?.length > 0">
-        <div class="table-responsive">
-          <table class="urgentistes-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Praticien</th>
-                <th>Coordonnées</th>
-                <th>Ville</th>
-                <th>Spécialité</th>
-                <th>Statut</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(doc, index) in urgentistStore.allUrgentists" :key="doc.id">
-                <td class="col-id">{{ index + 1 }}</td>
-                <td>
-                  <div class="user-info">
-                    <div class="avatar-sm">{{ doc.user?.first_name?.charAt(0) }}</div>
-                    <div>
-                      <div class="name">Dr. {{ doc.user?.first_name }} {{ doc.user?.last_name }}</div>
-                      <div class="role-sub">Urgentiste</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="contact-info">
-                    <span>📧 {{ doc.user?.email }}</span>
-                    <span>📞 {{ doc.user?.phone }}</span>
-                  </div>
-                </td>
-                <td><span class="city-tag">{{ doc.user?.city }}</span></td>
-                <td><span class="speciality-text">{{ doc.speciality }}</span></td>
-                <td>
-                  <span :class="doc.status === 'available' ? 'badge-dispo' : 'badge-indispo'">
-                    {{ doc.status === 'available' ? 'Disponible' : 'Indisponible' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <div class="action-buttons">
-                    <RouterLink :to="{ name: 'EditUrgentist', params: { id: doc.id } }" class="btn-edit" title="Modifier">
-                      ✏️
-                    </RouterLink>
-                    <button class="btn-delete" @click="supprimer(doc.id)" title="Supprimer">
-                      🗑️
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </main>
     </div>
-  </AdminLayout>
+  </div>
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useUrgentistStore } from '@/stores/urgentistStore'
+import { 
+  BarChart3, 
+  Users, 
+  Activity, 
+  MessageSquare, 
+  Clock,
+  TrendingUp,
+  FileText,
+  ArrowLeft,
+  Plus,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
+  AlertTriangle,
+  CheckCircle
+} from 'lucide-vue-next';
 
 const router = useRouter()
 const urgentistStore = useUrgentistStore()
+const isSidebarOpen = ref(false)
+
+// Fonctions sidebar
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const closeSidebar = () => {
+  if (window.innerWidth <= 1024) {
+    isSidebarOpen.value = false
+  }
+}
+
+const goBack = () => {
+  window.history.back()
+}
+
+// Fonctions utilitaires
+const getInitials = (user) => {
+  if (!user?.first_name || !user?.last_name) return 'N/A'
+  return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase()
+}
 
 const ajouterUrgentiste = () => {
   urgentistStore.resetFeedback();
@@ -125,66 +262,807 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.urgentistes-page { padding: 30px; background: #f8fafc; min-height: 100vh; }
-
-/* Header & Navigation */
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-.header-left { display: flex; align-items: center; gap: 20px; }
-
-.btn-back {
-  width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e2e8f0;
-  background: white; cursor: pointer; transition: 0.2s; color: #64748b;
+/* Layout Container */
+.admin-page-container {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  overflow: hidden;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
-.btn-back:hover { background: #f1f5f9; transform: translateX(-3px); color: #0040d0; }
 
-.title-group h2 { font-size: 24px; color: #1e293b; margin: 0; font-weight: 800; }
-.count-badge { font-size: 12px; background: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 20px; font-weight: 600; margin-top: 4px; display: inline-block; }
-
-.btn-add { background: #0040d0; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; }
-.btn-add:hover { background: #0035b0; transform: translateY(-2px); }
-
-/* Feedback Messages */
-.state-msg { padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 10px; }
-.loading { background: #eff6ff; color: #2563eb; }
-.error { background: #fef2f2; color: #dc2626; }
-.success { background: #f0fdf4; color: #16a34a; }
-
-/* Table Design */
-.table-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
-.urgentistes-table { width: 100%; border-collapse: collapse; }
-.urgentistes-table th { background: #f8fafc; color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; padding: 16px; text-align: left; }
-.urgentistes-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-
-.user-info { display: flex; align-items: center; gap: 12px; }
-.avatar-sm { width: 35px; height: 35px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
-.name { font-weight: 700; color: #1e293b; }
-.role-sub { font-size: 12px; color: #94a3b8; }
-
-.contact-info { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
-.city-tag { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
-.speciality-text { color: #0040d0; font-weight: 600; }
-
-/* Badges Status */
-.badge-dispo, .badge-indispo {
-  padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+.admin-layout {
+  display: flex;
+  height: 100%;
+  position: relative;
 }
-.badge-dispo { background: #dcfce7; color: #15803d; }
-.badge-indispo { background: #fee2e2; color: #b91c1c; }
 
-/* Actions */
-.text-right { text-align: right !important; }
-.action-buttons { display: flex; gap: 8px; justify-content: flex-end; }
-.btn-edit, .btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; text-decoration: none; font-size: 14px; }
-.btn-edit { background: #f1f5f9; }
-.btn-edit:hover { background: #e0e7ff; }
-.btn-delete { background: #f1f5f9; }
-.btn-delete:hover { background: #fee2e2; }
+/* Animation de fond */
+.admin-page-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
 
-/* Empty State */
-.empty-state { text-align: center; padding: 60px; background: white; border-radius: 16px; border: 2px dashed #e2e8f0; }
-.empty-state .icon { font-size: 40px; margin-bottom: 15px; }
-.btn-link { background: none; border: none; color: #0040d0; font-weight: 700; cursor: pointer; text-decoration: underline; margin-top: 10px; }
+.admin-layout > * {
+  position: relative;
+  z-index: 1;
+}
 
-.mini-spinner { width: 14px; height: 14px; border: 2px solid #2563eb; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* === Sidebar === */
+.sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  flex-shrink: 0;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sidebar-header {
+  padding: 2rem 1.5rem;
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.logo-text {
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text span {
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  margin-left: 8px;
+}
+
+.menu {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  position: relative;
+  z-index: 2;
+  overflow-y: auto;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 14px 18px;
+  text-decoration: none;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.menu-item:hover::before {
+  left: 100%;
+}
+
+.menu-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.menu-item.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(16, 185, 129, 0.2));
+  color: white;
+  transform: translateX(5px);
+}
+
+.menu-item.active .menu-icon {
+  color: #3b82f6;
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.menu-divider {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 1rem 0;
+}
+
+/* Mobile Toggle */
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 1100;
+  background: #0f1e46;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-toggle:hover {
+  background: #1e2b5c;
+  transform: translateY(-2px);
+}
+
+/* Main Content */
+.admin-main {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+.dashboard-admin {
+  font-family: 'Inter', sans-serif;
+  padding: 2rem;
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: white;
+  box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+/* === Header === */
+.dashboard-header {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #10b981);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+  z-index: 1;
+}
+
+.dashboard-header:hover::before {
+  transform: scaleX(1);
+}
+
+.dashboard-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.title-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+.title-icon {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  animation: pulse 2s infinite;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* === Back Button === */
+.title-with-back {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+.back-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.back-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* === States === */
+.state-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.state-message.loading {
+  background: rgba(37, 99, 235, 0.1);
+  color: rgba(37, 99, 235, 0.9);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.state-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.state-message.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: rgba(16, 185, 129, 0.9);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === Empty State === */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-icon {
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 1rem;
+}
+
+/* === Table Section === */
+.table-section {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.table-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+  z-index: 1;
+}
+
+.table-section:hover::before {
+  transform: scaleX(1);
+}
+
+.table-section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.table-container {
+  position: relative;
+  z-index: 2;
+  overflow-x: auto;
+}
+
+.urgentistes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.urgentistes-table th {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 1rem;
+  text-align: left;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.urgentistes-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.9rem;
+}
+
+.table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+/* === Table Cells === */
+.practitioner-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.practitioner-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.practitioner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.practitioner-name {
+  font-weight: 600;
+  color: white;
+}
+
+.practitioner-role {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.contact-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.contact-icon {
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.city-tag {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.speciality-text {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* === Status Badge === */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.status-badge.available {
+  background: rgba(16, 185, 129, 0.1);
+  color: rgba(16, 185, 129, 0.9);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.unavailable {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.available {
+  background: rgba(16, 185, 129, 0.9);
+}
+
+.status-dot.unavailable {
+  background: rgba(239, 68, 68, 0.9);
+}
+
+/* === Action Buttons === */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.action-btn-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.action-btn-icon:hover {
+  transform: translateY(-2px);
+}
+
+.action-btn-icon.edit:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+}
+
+.action-btn-icon.delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+/* === Action Buttons === */
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 140px;
+  min-height: 44px;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+}
+
+/* === Responsive Design === */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .mobile-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-admin {
+    padding: 1rem;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .title-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .dashboard-title {
+    font-size: 1.4rem;
+  }
+  
+  .table-section {
+    padding: 1rem;
+  }
+  
+  .urgentistes-table {
+    font-size: 0.8rem;
+  }
+  
+  .urgentistes-table th,
+  .urgentistes-table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .practitioner-cell, .contact-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .action-btn-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* === Variables === */
+:root {
+  --primary: #2563eb;
+  --secondary: #10b981;
+  --light: #f8fafc;
+  --dark: #0f172a;
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
 </style>

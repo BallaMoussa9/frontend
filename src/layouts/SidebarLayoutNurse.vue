@@ -2,7 +2,7 @@
   <div class="layout-wrapper">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <RouterLink to="/" class="logo">🩺 SanKo Nurse</RouterLink>
+        <RouterLink to="/" class="logo">🩺 SanTeKo Nurse</RouterLink>
       </div>
       <nav class="nav-menu">
         <RouterLink :to="{name:'NurseDashboard'}" class="nav-item">Tableau de bord</RouterLink>

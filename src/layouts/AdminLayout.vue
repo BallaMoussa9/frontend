@@ -10,7 +10,7 @@
       <aside :class="['sidebar', { 'open': isSidebarOpen }]">
         <div class="sidebar-header">
           <div class="logo-icon">S</div>
-          <div class="logo-text">SanKo <span>Admin</span></div>
+          <div class="logo-text">SanTeKo <span>Admin</span></div>
         </div>
 
         <nav class="menu">

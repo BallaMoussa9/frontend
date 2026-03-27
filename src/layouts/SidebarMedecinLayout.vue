@@ -2,7 +2,7 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="logo">
-        <span>🩺</span> SanKo
+        <span>🩺</span> SanTeKo
       </div>
       <nav>
         <router-link :to="{name:'DoctorDashboard'}" class="nav-item" exact-active-class="active">Accueil</router-link>

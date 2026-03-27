@@ -1,7 +1,7 @@
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <div class="logo">🩺 SanKo</div>
+      <div class="logo">🩺 SanTeKo</div>
       <nav>
         <router-link to="/infirmier/dashboard" class="nav-item" exact-active-class="active">Accueil</router-link>
         <router-link to="/infirmier/patients" class="nav-item">Suivi des patients</router-link>

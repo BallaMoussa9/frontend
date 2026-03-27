@@ -137,16 +137,25 @@ async fetchLabTechnicianByUserId(userId) {
             this.currentLabTechnicianProfile = dataLab;
             return dataLab.id; // On retourne l'id de l'objet renvoyé par l'API
         } catch (apiError) {
-            console.warn("UserStore: API indisponible, vérification finale des données de session.");
+            console.warn("UserStore: API indisponible ou technicien non trouvé, vérification finale des données de session.");
             if (this.currentUser && this.currentUser.lab_technician_id) {
                 return this.currentUser.lab_technician_id;
+            }
+            // Si l'API retourne 404, c'est normal si l'utilisateur n'a pas de profil technicien
+            if (apiError.response?.status === 404) {
+                console.warn("UserStore: Aucun profil technicien trouvé pour cet utilisateur - c'est normal");
+                return null;
             }
             throw apiError;
         }
 
     } catch (error) {
         // C'est ici que l'erreur "response is not defined" arrivait si on mélangeait les variables
-        this.setError(`Profil laborantin non trouvé.`);
+        if (error.response?.status === 404) {
+            console.warn("UserStore: Aucun profil technicien trouvé pour cet utilisateur - ce n'est pas une erreur");
+            return null;
+        }
+        this.setError(`Profil technicien de laboratoire non trouvé.`);
         console.error("UserStore Error:", error.message);
         return null; 
     } finally {

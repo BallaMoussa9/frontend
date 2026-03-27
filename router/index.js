@@ -502,6 +502,20 @@ const routes = [
     meta: { requiresAuth: true, role: 'patient' },
     props: true,
   },
+  {
+    path: '/patient/settings/:id',
+    name: 'PatientSettings',
+    component: () => import('@/views/patient/PatientSettingsView.vue'),
+    meta: { requiresAuth: true, role: 'patient' },
+    props: true,
+  },
+  {
+    path: '/patient/teleconsultation/:id',
+    name: 'Teleconsultation',
+    component: () => import('@/views/patient/TeleconsultationView.vue'),
+    meta: { requiresAuth: true, role: 'patient' },
+    props: true,
+  },
   //-----------------------urgentiste---------------------------------
   {
       path: '/urgentiste/dashboard/:id',

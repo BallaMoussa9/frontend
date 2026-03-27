@@ -2,7 +2,7 @@
   <div class="lab-layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="logo">SanKo - Labo</div>
+      <div class="logo">SanTeKo - Labo</div>
       <nav class="menu">
         <RouterLink to="/lab/dashboard" class="menu-item">🧬 Dashboard</RouterLink>
         <RouterLink to="/lab/demandes" class="menu-item">📥 Demandes d'analyse</RouterLink>

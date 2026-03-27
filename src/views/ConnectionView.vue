@@ -50,7 +50,21 @@
                 <label for="password">Mot de passe</label>
                 <div class="input-wrapper">
                   <Lock :size="18" class="input-icon" />
-                  <input id="password" v-model="password" type="password" placeholder="********" required />
+                  <input 
+                    id="password" 
+                    v-model="password" 
+                    :type="showPassword ? 'text' : 'password'" 
+                    placeholder="********" 
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    @click="showPassword = !showPassword" 
+                    class="password-toggle"
+                  >
+                    <Eye :size="18" v-if="!showPassword" />
+                    <EyeOff :size="18" v-else />
+                  </button>
                 </div>
               </div>
 
@@ -130,13 +144,14 @@ import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import { 
   Mail, Lock, User, Stethoscope, Heart, Ambulance, FlaskConical, 
-  Calculator, Settings, LogIn, AlertCircle, Shield, Clock, Users 
+  Calculator, Settings, LogIn, AlertCircle, Shield, Clock, Users, Eye, EyeOff
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const email = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const role = ref('patient') 
 const router = useRouter()
 const isFetchingProfileId = ref(false)
@@ -188,8 +203,18 @@ async function seConnecter() {
       default: redirectionRouteName = 'Home';
     }
 
-    if (needsProfileId) await router.push({ name: redirectionRouteName, params: { id: redirectionId } });
-    else await router.push({ name: redirectionRouteName });
+    if (needsProfileId) {
+      if (redirectionId) {
+        await router.push({ name: redirectionRouteName, params: { id: redirectionId } });
+      } else {
+        // Si aucun profil n'est trouvé, rediriger vers une page de création de profil
+        console.warn(`Aucun profil trouvé pour ${roleName}, redirection vers la page de création`);
+        // Pour le technicien, on pourrait rediriger vers une page de création ou vers le dashboard avec l'ID utilisateur
+        await router.push({ name: redirectionRouteName, params: { id: userId } });
+      }
+    } else {
+      await router.push({ name: redirectionRouteName });
+    }
 
   } catch (error) {
     authStore.authError = error.response?.data?.message || error.message;
@@ -421,6 +446,23 @@ async function seConnecter() {
 
 .role-option.active .role-lucide-icon {
   color: #3b82f6;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary {
